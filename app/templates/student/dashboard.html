@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard | Mwalimu AI{% endblock %}
+
+{% block body_class %}student-dashboard{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-2">
+    <span
+        id="student-name"
+        class="text-muted"
+    >
+        Student
+    </span>
+
+    <button
+        id="logout-button"
+        type="button"
+        class="button button--secondary"
+    >
+        Log out
+    </button>
+</div>
+{% endblock %}
+
+{% block navigation %}
+<nav class="app-nav">
+    <div class="container app-nav__inner">
+
+        <a
+            href="/student/dashboard"
+            class="app-nav__link app-nav__link--active"
+        >
+            Dashboard
+        </a>
+
+        <a
+            href="#subjects"
+            class="app-nav__link"
+        >
+            Subjects
+        </a>
+
+        <a
+            href="#progress"
+            class="app-nav__link"
+        >
+            Progress
+        </a>
+
+    </div>
+</nav>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+
+    <p class="page-header__eyebrow">
+        Student Learning
+    </p>
+
+    <h1 class="page-header__title">
+        Continue your learning
+    </h1>
+
+    <p class="page-header__description">
+        Choose a subject, identify a topic to work on,
+        and continue your learning journey.
+    </p>
+
+</div>
+{% endblock %}
+
+{% block content %}
+
+<section
+    id="student-dashboard-content"
+    aria-live="polite"
+>
+
+    <div
+        id="student-dashboard-error"
+        class="alert alert--error"
+        hidden
+    ></div>
+
+    <div
+        id="student-dashboard-loading"
+        class="card"
+    >
+        <p class="mb-0">
+            Loading your learning dashboard...
+        </p>
+    </div>
+
+    <div
+        id="student-dashboard-main"
+        hidden
+    >
+
+        <section
+            id="subjects"
+            class="mb-3"
+        >
+
+            <div class="flex items-center justify-between gap-2 mb-2">
+
+                <div>
+                    <h2 class="mb-1">
+                        Your subjects
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Select a subject to view its learning topics.
+                    </p>
+                </div>
+
+            </div>
+
+            <div
+                id="subject-grid"
+                class="grid grid--3"
+            ></div>
+
+        </section>
+
+        <section
+            id="progress"
+            class="mt-3"
+        >
+
+            <div class="card">
+
+                <div class="card__header">
+
+                    <h2 class="card__title">
+                        Learning progress
+                    </h2>
+
+                    <p class="card__description">
+                        See how your performance changes from
+                        diagnostic assessment to practice.
+                    </p>
+
+                </div>
+
+                <div
+                    id="progress-content"
+                    hidden
+                >
+
+                    <div
+                        id="progress-summary"
+                        class="grid grid--4 mb-3"
+                    >
+
+                        <div class="card">
+                            <p class="text-muted mb-1">
+                                Topics completed
+                            </p>
+
+                            <h3
+                                id="progress-completed-count"
+                                class="mb-0"
+                            >
+                                0
+                            </h3>
+                        </div>
+
+                        <div class="card">
+                            <p class="text-muted mb-1">
+                                Improved
+                            </p>
+
+                            <h3
+                                id="progress-improved-count"
+                                class="mb-0"
+                            >
+                                0
+                            </h3>
+                        </div>
+
+                        <div class="card">
+                            <p class="text-muted mb-1">
+                                Unchanged
+                            </p>
+
+                            <h3
+                                id="progress-unchanged-count"
+                                class="mb-0"
+                            >
+                                0
+                            </h3>
+                        </div>
+
+                        <div class="card">
+                            <p class="text-muted mb-1">
+                                Declined
+                            </p>
+
+                            <h3
+                                id="progress-declined-count"
+                                class="mb-0"
+                            >
+                                0
+                            </h3>
+                        </div>
+
+                    </div>
+
+                    <div
+                        id="progress-list"
+                        class="grid grid--2"
+                    ></div>
+
+                </div>
+
+                <div
+                    id="progress-empty"
+                    class="empty-state"
+                    hidden
+                >
+
+                    <h3 class="empty-state__title">
+                        Start a learning session
+                    </h3>
+
+                    <p class="empty-state__description">
+                        Choose a subject and topic to begin diagnosing
+                        your learning needs and building progress.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/student-dashboard.js"></script>
+{% endblock %}

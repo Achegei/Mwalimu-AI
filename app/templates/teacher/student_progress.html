@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Student Progress | Mwalimu AI{% endblock %}
+
+{% block content %}
+<section
+    id="teacher-student-progress"
+    data-classroom-id="{{ classroom_id }}"
+    data-student-id="{{ student_id }}"
+    aria-live="polite"
+>
+    <div class="page-header">
+        <div>
+            <p class="text-muted mb-1">
+                Teacher learning insight
+            </p>
+
+            <h1 id="student-progress-name">
+                Student Progress
+            </h1>
+
+            <p
+                id="student-progress-context"
+                class="text-muted mb-0"
+            >
+                Review this student's learning progress
+                within the selected class.
+            </p>
+        </div>
+
+        <a
+            href="/teacher/classes/{{ classroom_id }}"
+            class="button button--secondary"
+        >
+            Back to class
+        </a>
+    </div>
+
+    <div
+        id="student-progress-error"
+        class="alert alert--error mb-3"
+        hidden
+    ></div>
+
+    <div
+        id="student-progress-loading"
+        class="card"
+    >
+        <p class="mb-0">
+            Loading student progress...
+        </p>
+    </div>
+
+    <div
+        id="student-progress-main"
+        hidden
+    >
+        <section class="card mb-3">
+            <div class="card__header">
+                <div>
+                    <p class="text-muted mb-1">
+                        Student
+                    </p>
+
+                    <h2
+                        id="student-name"
+                        class="card__title"
+                    >
+                        —
+                    </h2>
+                </div>
+
+                <span
+                    id="student-login-id"
+                    class="badge badge--info"
+                >
+                    —
+                </span>
+            </div>
+
+            <p
+                id="student-classroom-name"
+                class="text-muted mb-0"
+            >
+                —
+            </p>
+        </section>
+
+        <section class="mb-3">
+            <div class="mb-2">
+                <h2 class="mb-1">
+                    Learning Summary
+                </h2>
+
+                <p class="text-muted mb-0">
+                    A deterministic summary of the
+                    student's completed learning activity
+                    in this class.
+                </p>
+            </div>
+
+            <div class="grid grid--4">
+                <article class="stat">
+                    <p class="stat__label">
+                        Completed topics
+                    </p>
+
+                    <p
+                        id="student-completed-count"
+                        class="stat__value"
+                    >
+                        0
+                    </p>
+                </article>
+
+                <article class="stat">
+                    <p class="stat__label">
+                        Improved
+                    </p>
+
+                    <p
+                        id="student-improved-count"
+                        class="stat__value"
+                    >
+                        0
+                    </p>
+                </article>
+
+                <article class="stat">
+                    <p class="stat__label">
+                        Unchanged
+                    </p>
+
+                    <p
+                        id="student-unchanged-count"
+                        class="stat__value"
+                    >
+                        0
+                    </p>
+                </article>
+
+                <article class="stat">
+                    <p class="stat__label">
+                        Needs attention
+                    </p>
+
+                    <p
+                        id="student-declined-count"
+                        class="stat__value"
+                    >
+                        0
+                    </p>
+                </article>
+            </div>
+        </section>
+
+        <section>
+            <div class="mb-2">
+                <h2 class="mb-1">
+                    Topic Progress
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Compare diagnostic and practice
+                    performance for each completed topic.
+                </p>
+            </div>
+
+            <div
+                id="student-progress-empty"
+                class="empty-state"
+                hidden
+            >
+                <h3 class="empty-state__title">
+                    No completed learning activity
+                </h3>
+
+                <p class="empty-state__description">
+                    This student does not yet have
+                    completed diagnostic activity in this
+                    class.
+                </p>
+            </div>
+
+            <div
+                id="student-progress-list"
+                class="grid grid--2"
+            ></div>
+        </section>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="{{ url_for(
+        'static',
+        path='/js/teacher-student-progress.js'
+    ) }}"
+    defer
+></script>
+{% endblock %}

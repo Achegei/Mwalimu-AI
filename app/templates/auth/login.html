@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Login | Mwalimu AI{% endblock %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+
+<section class="auth-layout">
+
+    <div class="auth-intro">
+
+        <p class="page-header__eyebrow">
+            Learning Intelligence
+        </p>
+
+        <h1 class="auth-intro__title">
+            Learn better. Understand faster.
+        </h1>
+
+        <p class="auth-intro__description">
+            Mwalimu AI helps students identify learning gaps,
+            receive personalized support, practise concepts,
+            and improve with evidence-based feedback.
+        </p>
+
+        <div class="auth-feature-list">
+
+            <div class="auth-feature">
+                <div class="auth-feature__number">1</div>
+
+                <div>
+                    <h2>Diagnose</h2>
+                    <p>
+                        Find out exactly which concepts need more attention.
+                    </p>
+                </div>
+            </div>
+
+            <div class="auth-feature">
+                <div class="auth-feature__number">2</div>
+
+                <div>
+                    <h2>Learn</h2>
+                    <p>
+                        Get guided explanations and support from the AI tutor.
+                    </p>
+                </div>
+            </div>
+
+            <div class="auth-feature">
+                <div class="auth-feature__number">3</div>
+
+                <div>
+                    <h2>Improve</h2>
+                    <p>
+                        Practise, receive feedback, and track learning progress.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="auth-panel">
+
+        <div class="card auth-card">
+
+            <div class="card__header">
+
+                <h2 class="card__title">
+                    Welcome back
+                </h2>
+
+                <p class="card__description">
+                    Sign in to continue to Mwalimu AI.
+                </p>
+
+            </div>
+
+            <form
+                id="login-form"
+                class="form"
+                autocomplete="on"
+            >
+
+                <div
+                    id="login-error"
+                    class="alert alert--error"
+                    role="alert"
+                    hidden
+                ></div>
+
+                <div class="form-group">
+
+                    <label
+                        for="login-id"
+                        class="form-label"
+                    >
+                        Login ID
+                    </label>
+
+                    <input
+                        id="login-id"
+                        name="login_id"
+                        type="text"
+                        class="form-control"
+                        placeholder="Enter your login ID"
+                        autocomplete="username"
+                        required
+                    >
+
+                </div>
+
+                <div class="form-group">
+
+                    <label
+                        for="password"
+                        class="form-label"
+                    >
+                        Password
+                    </label>
+
+                    <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        class="form-control"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                </div>
+
+                <button
+                    id="login-button"
+                    type="submit"
+                    class="button button--primary button--full"
+                >
+                    Sign in
+                </button>
+
+            </form>
+
+            <div class="auth-card__help">
+
+                <p>
+                    Your account is provided by your school or
+                    Mwalimu AI administrator.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/auth.js"></script>
+{% endblock %}

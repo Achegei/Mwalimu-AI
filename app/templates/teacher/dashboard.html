@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Dashboard | Mwalimu AI{% endblock %}
+
+{% block body_class %}teacher-dashboard{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-2">
+
+    <span
+        id="teacher-name"
+        class="text-muted"
+    >
+        Teacher
+    </span>
+
+    <button
+        id="logout-button"
+        type="button"
+        class="button button--secondary"
+    >
+        Log out
+    </button>
+
+</div>
+{% endblock %}
+
+{% block navigation %}
+<nav class="app-nav">
+    <div class="container app-nav__inner">
+
+        <a
+            href="/teacher/dashboard"
+            class="app-nav__link app-nav__link--active"
+        >
+            Dashboard
+        </a>
+
+        <a
+            href="#classes"
+            class="app-nav__link"
+        >
+            Classes
+        </a>
+
+    </div>
+</nav>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+
+    <p class="page-header__eyebrow">
+        Teacher Analytics
+    </p>
+
+    <h1 class="page-header__title">
+        Understand your learners
+    </h1>
+
+    <p class="page-header__description">
+        Select a class to review learning activity,
+        identify weak topics, and plan targeted interventions.
+    </p>
+
+</div>
+{% endblock %}
+
+{% block content %}
+
+<section
+    id="teacher-dashboard-content"
+    aria-live="polite"
+>
+
+    <div
+        id="teacher-dashboard-error"
+        class="alert alert--error"
+        hidden
+    ></div>
+
+    <div
+        id="teacher-dashboard-loading"
+        class="card"
+    >
+        <p class="mb-0">
+            Loading your classes...
+        </p>
+    </div>
+
+    <div
+        id="teacher-dashboard-main"
+        hidden
+    >
+
+        <section id="classes">
+
+            <div class="mb-2">
+
+                <h2 class="mb-1">
+                    Your classes
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Select a class to view its learning analytics
+                    and intervention insights.
+                </p>
+
+            </div>
+
+            <div
+                id="teacher-class-grid"
+                class="grid grid--3"
+            ></div>
+
+        </section>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/teacher-dashboard.js"></script>
+{% endblock %}

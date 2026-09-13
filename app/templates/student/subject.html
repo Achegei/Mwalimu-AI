@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Subject Topics | Mwalimu AI{% endblock %}
+
+{% block body_class %}student-subject-page{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-2">
+    <span
+        id="student-name"
+        class="text-muted"
+    >
+        Student
+    </span>
+
+    <button
+        id="logout-button"
+        type="button"
+        class="button button--secondary"
+    >
+        Log out
+    </button>
+</div>
+{% endblock %}
+
+{% block navigation %}
+<nav class="app-nav">
+    <div class="container app-nav__inner">
+
+        <a
+            href="/student/dashboard"
+            class="app-nav__link"
+        >
+            Dashboard
+        </a>
+
+        <a
+            href="/student/dashboard#subjects"
+            class="app-nav__link app-nav__link--active"
+        >
+            Subjects
+        </a>
+
+        <a
+            href="/student/dashboard#progress"
+            class="app-nav__link"
+        >
+            Progress
+        </a>
+
+    </div>
+</nav>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+
+    <p class="page-header__eyebrow">
+        Student Learning
+    </p>
+
+    <h1
+        id="subject-title"
+        class="page-header__title"
+    >
+        Subject
+    </h1>
+
+    <p
+        id="subject-description"
+        class="page-header__description"
+    >
+        Choose a topic to continue your learning.
+    </p>
+
+</div>
+{% endblock %}
+
+{% block content %}
+
+<section aria-live="polite">
+
+    <div
+        id="subject-error"
+        class="alert alert--error"
+        hidden
+    ></div>
+
+    <div
+        id="subject-loading"
+        class="card"
+    >
+        <p class="mb-0">
+            Loading topics...
+        </p>
+    </div>
+
+    <div
+        id="subject-main"
+        hidden
+    >
+
+        <div class="flex items-center justify-between gap-2 mb-2">
+
+            <div>
+                <h2 class="mb-1">
+                    Available topics
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Select a topic to begin with a diagnostic assessment.
+                </p>
+            </div>
+
+            <a
+                href="/student/dashboard"
+                class="button button--secondary"
+            >
+                Back to dashboard
+            </a>
+
+        </div>
+
+        <div
+            id="topic-grid"
+            class="grid grid--3"
+        ></div>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.MWALIMU_SUBJECT_ID = {{ subject_id }};
+</script>
+
+<script src="/static/js/student-subject.js"></script>
+{% endblock %}

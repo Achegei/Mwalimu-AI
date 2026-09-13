@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}AI Tutor | Mwalimu AI{% endblock %}
+
+{% block body_class %}student-tutor-page{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-2">
+    <span
+        id="student-name"
+        class="text-muted"
+    >
+        Student
+    </span>
+
+    <button
+        id="logout-button"
+        type="button"
+        class="button button--secondary"
+    >
+        Log out
+    </button>
+</div>
+{% endblock %}
+
+{% block navigation %}
+<nav class="app-nav">
+    <div class="container app-nav__inner">
+
+        <a
+            href="/student/dashboard"
+            class="app-nav__link"
+        >
+            Dashboard
+        </a>
+
+        <a
+            href="/student/dashboard#subjects"
+            class="app-nav__link app-nav__link--active"
+        >
+            Subjects
+        </a>
+
+        <a
+            href="/student/dashboard#progress"
+            class="app-nav__link"
+        >
+            Progress
+        </a>
+
+    </div>
+</nav>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+
+    <p class="page-header__eyebrow">
+        Personalized Learning
+    </p>
+
+    <h1 class="page-header__title">
+        Learn with Mwalimu AI
+    </h1>
+
+    <p class="page-header__description">
+        Ask questions, explore the topic, and strengthen your
+        understanding before moving to practice.
+    </p>
+
+</div>
+{% endblock %}
+
+{% block content %}
+
+<section aria-live="polite">
+
+    <div
+        id="tutor-error"
+        class="alert alert--error"
+        hidden
+    ></div>
+
+    <div
+        id="tutor-loading"
+        class="card"
+    >
+        <p class="mb-0">
+            Preparing your personalized learning session...
+        </p>
+    </div>
+
+    <div
+        id="tutor-main"
+        hidden
+    >
+
+        <div class="card">
+
+            <div class="card__header">
+
+                <h2
+                    id="tutor-topic-title"
+                    class="card__title"
+                >
+                    AI Tutor
+                </h2>
+
+                <p class="card__description">
+                    Your tutor uses your diagnostic performance
+                    to guide this learning session.
+                </p>
+
+            </div>
+
+            <div
+                id="tutor-conversation"
+                class="tutor-conversation"
+                aria-live="polite"
+            ></div>
+
+            <form
+                id="tutor-form"
+                class="form mt-3"
+            >
+
+                <div class="form-group">
+
+                    <label
+                        for="tutor-message"
+                        class="form-label"
+                    >
+                        Ask Mwalimu AI
+                    </label>
+
+                    <textarea
+                        id="tutor-message"
+                        name="message"
+                        class="form-control"
+                        rows="4"
+                        placeholder="Ask a question about this topic..."
+                        required
+                    ></textarea>
+
+                </div>
+
+                <div class="flex items-center justify-between gap-2">
+
+                    <button
+                        id="send-message-button"
+                        type="submit"
+                        class="button button--primary"
+                    >
+                        Send message
+                    </button>
+
+                    <button
+                        id="continue-practice-button"
+                        type="button"
+                        class="button button--secondary"
+                    >
+                        Continue to practice
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.MWALIMU_DIAGNOSTIC_ATTEMPT_ID = {{ attempt_id }};
+</script>
+
+<script src="/static/js/student-tutor.js"></script>
+{% endblock %}

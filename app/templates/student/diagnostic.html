@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Diagnostic Assessment | Mwalimu AI{% endblock %}
+
+{% block body_class %}student-diagnostic-page{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-2">
+    <span
+        id="student-name"
+        class="text-muted"
+    >
+        Student
+    </span>
+
+    <button
+        id="logout-button"
+        type="button"
+        class="button button--secondary"
+    >
+        Log out
+    </button>
+</div>
+{% endblock %}
+
+{% block navigation %}
+<nav class="app-nav">
+    <div class="container app-nav__inner">
+
+        <a
+            href="/student/dashboard"
+            class="app-nav__link"
+        >
+            Dashboard
+        </a>
+
+        <a
+            href="/student/dashboard#subjects"
+            class="app-nav__link app-nav__link--active"
+        >
+            Subjects
+        </a>
+
+        <a
+            href="/student/dashboard#progress"
+            class="app-nav__link"
+        >
+            Progress
+        </a>
+
+    </div>
+</nav>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+
+    <p class="page-header__eyebrow">
+        Diagnostic Assessment
+    </p>
+
+    <h1
+        id="diagnostic-title"
+        class="page-header__title"
+    >
+        Preparing your diagnostic
+    </h1>
+
+    <p
+        id="diagnostic-description"
+        class="page-header__description"
+    >
+        Answer the questions to help Mwalimu AI understand
+        where you need the most support.
+    </p>
+
+</div>
+{% endblock %}
+
+{% block content %}
+
+<section aria-live="polite">
+
+    <div
+        id="diagnostic-error"
+        class="alert alert--error"
+        hidden
+    ></div>
+
+    <div
+        id="diagnostic-loading"
+        class="card"
+    >
+        <p class="mb-0">
+            Preparing diagnostic questions...
+        </p>
+    </div>
+
+    <div
+        id="diagnostic-main"
+        hidden
+    >
+
+        <div class="card">
+
+            <div class="card__header">
+
+                <div class="flex items-center justify-between gap-2">
+
+                    <div>
+                        <p
+                            id="question-progress"
+                            class="text-muted mb-1"
+                        >
+                            Question
+                        </p>
+
+                        <h2
+                            id="question-text"
+                            class="card__title"
+                        >
+                            Question text
+                        </h2>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <form
+                id="diagnostic-form"
+                class="form"
+            >
+
+                <div
+                    id="answer-options"
+                    class="form"
+                ></div>
+
+                <button
+                    id="submit-answer-button"
+                    type="submit"
+                    class="button button--primary"
+                >
+                    Submit answer
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.MWALIMU_TOPIC_ID = {{ topic_id }};
+</script>
+
+<script src="/static/js/student-diagnostic.js"></script>
+{% endblock %}
