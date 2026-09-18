@@ -117,6 +117,7 @@ async def test_teacher_can_view_enrolled_student_progress(
     seeded_users,
 ):
     subject = Subject(
+        school_id=seeded_users["school"].id,
         name="Biology",
         slug="biology-teacher-progress",
         description="Teacher progress test.",
@@ -384,6 +385,7 @@ async def test_teacher_student_progress_is_scoped_to_requested_classroom(
     classroom = seeded_users["classroom"]
 
     subject = Subject(
+        school_id=seeded_users["school"].id,
         name="Biology",
         slug="biology-classroom-scope",
         description="Classroom scoping test.",

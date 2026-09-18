@@ -15,8 +15,10 @@ from app.models.learning_event import LearningEvent
 @pytest.fixture
 async def practice_content(
     db_session,
+    seeded_users,
 ):
     subject = Subject(
+        school_id=seeded_users["school"].id,
         name="Biology",
         slug="biology",
         description="Form 2 Biology",

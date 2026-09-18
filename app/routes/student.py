@@ -60,6 +60,7 @@ async def student_progress(
     progress = await get_student_progress(
         db=db,
         student_id=current_user.id,
+        school_id=current_user.school_id,
     )
 
     return StudentProgressResponse(**progress)
@@ -73,7 +74,10 @@ async def list_subjects(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.STUDENT)),
 ) -> list[SubjectSummary]:
-    subjects = await get_active_subjects(db)
+    subjects = await get_active_subjects(
+        db=db,
+        school_id=current_user.school_id,
+    )
 
     return subjects
 
@@ -87,7 +91,10 @@ async def list_subject_topics(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.STUDENT)),
 ) -> SubjectWithTopics:
-    subjects = await get_active_subjects(db)
+    subjects = await get_active_subjects(
+        db=db,
+        school_id=current_user.school_id,
+    )
 
     subject = next(
         (item for item in subjects if item.id == subject_id),
@@ -103,6 +110,7 @@ async def list_subject_topics(
     topics = await get_active_topics_for_subject(
         db=db,
         subject_id=subject.id,
+        school_id=current_user.school_id,
         form_level=2,
     )
 
@@ -128,6 +136,7 @@ async def start_diagnostic(
         attempt, topic, questions = await start_diagnostic_assessment(
             db=db,
             student_id=current_user.id,
+            school_id=current_user.school_id,
             topic_id=topic_id,
         )
     except ValueError as exc:
@@ -225,6 +234,7 @@ async def get_diagnostic_interpretation(
         result = await interpret_diagnostic_attempt(
             db=db,
             student_id=current_user.id,
+            school_id=current_user.school_id,
             attempt_id=attempt_id,
         )
     except ValueError as exc:
@@ -249,6 +259,7 @@ async def start_tutor(
         tutor_message, topic_id = await start_tutor_session(
             db=db,
             student_id=current_user.id,
+            school_id=current_user.school_id,
             attempt_id=attempt_id,
         )
     except ValueError as exc:
@@ -278,6 +289,7 @@ async def send_tutor_message(
         tutor_message, topic_id = await continue_tutor_session(
             db=db,
             student_id=current_user.id,
+            school_id=current_user.school_id,
             attempt_id=attempt_id,
             student_message=payload.message,
         )
@@ -313,6 +325,7 @@ async def start_practice(
         ) = await start_practice_assessment(
             db=db,
             student_id=current_user.id,
+            school_id=current_user.school_id,
             diagnostic_attempt_id=diagnostic_attempt_id,
         )
     except ValueError as exc:
@@ -411,6 +424,7 @@ async def get_learning_improvement(
         result = await build_learning_improvement_result(
             db=db,
             student_id=current_user.id,
+            school_id=current_user.school_id,
             diagnostic_attempt_id=diagnostic_attempt_id,
         )
     except ValueError as exc:

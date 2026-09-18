@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.assessment import AssessmentAttempt
 from app.models.assessment_answer import AssessmentAnswer
 from app.models.assessment_question import AssessmentQuestion
-from app.models.content import Question, Topic
+from app.models.content import Question, Subject, Topic
 from app.models.enrollment import Enrollment
 from app.models.enums import (
     AssessmentStatus,
@@ -14,6 +14,7 @@ from app.models.enums import (
     LearningEventType,
 )
 from app.models.learning_event import LearningEvent
+from app.services.content import get_active_topic_for_school
 
 
 async def get_student_active_classroom_id(
@@ -41,6 +42,7 @@ async def get_student_active_classroom_id(
 async def start_diagnostic_assessment(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     topic_id: int,
 ) -> tuple[AssessmentAttempt, Topic, list[Question]]:
     classroom_id = await get_student_active_classroom_id(
@@ -49,9 +51,16 @@ async def start_diagnostic_assessment(
     )
 
     topic_result = await db.execute(
-        select(Topic).where(
+        select(Topic)
+        .join(
+            Subject,
+            Topic.subject_id == Subject.id,
+        )
+        .where(
             Topic.id == topic_id,
             Topic.is_active.is_(True),
+            Subject.school_id == school_id,
+            Subject.is_active.is_(True),
         )
     )
 
@@ -125,6 +134,7 @@ async def start_diagnostic_assessment(
 async def start_practice_assessment(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     diagnostic_attempt_id: int,
 ) -> tuple[
     AssessmentAttempt,
@@ -155,14 +165,11 @@ async def start_practice_assessment(
             "Diagnostic attempt must be completed before starting practice."
         )
 
-    topic_result = await db.execute(
-        select(Topic).where(
-            Topic.id == diagnostic_attempt.topic_id,
-            Topic.is_active.is_(True),
-        )
+    topic = await get_active_topic_for_school(
+        db=db,
+        topic_id=diagnostic_attempt.topic_id,
+        school_id=school_id,
     )
-
-    topic = topic_result.scalar_one_or_none()
 
     if topic is None:
         raise ValueError("Topic not found.")
@@ -624,6 +631,7 @@ async def complete_practice_assessment(
 async def compare_diagnostic_to_practice(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     diagnostic_attempt_id: int,
 ) -> dict:
     """
@@ -646,6 +654,15 @@ async def compare_diagnostic_to_practice(
 
     if diagnostic_attempt is None:
         raise ValueError("Completed diagnostic assessment attempt not found.")
+
+    topic = await get_active_topic_for_school(
+        db=db,
+        topic_id=diagnostic_attempt.topic_id,
+        school_id=school_id,
+    )
+
+    if topic is None:
+        raise ValueError("Topic not found.")
 
     practice_result = await db.execute(
         select(AssessmentAttempt)
@@ -710,11 +727,13 @@ async def compare_diagnostic_to_practice(
 async def build_learning_improvement_result(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     diagnostic_attempt_id: int,
 ) -> dict:
     comparison = await compare_diagnostic_to_practice(
         db=db,
         student_id=student_id,
+        school_id=school_id,
         diagnostic_attempt_id=diagnostic_attempt_id,
     )
 

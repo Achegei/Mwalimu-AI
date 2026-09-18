@@ -46,10 +46,12 @@ async def login_teacher(client) -> dict[str, str]:
 async def create_subject_and_topic(
     db_session,
     *,
+    school_id: int,
     topic_slug: str = "gaseous-exchange",
     topic_title: str = "Gaseous Exchange",
 ):
     subject = Subject(
+        school_id=school_id,
         name="Biology",
         slug="biology",
         description="Form 2 Biology",
@@ -134,6 +136,7 @@ async def test_student_progress_shows_completed_diagnostic_without_practice(
 ):
     _, topic = await create_subject_and_topic(
         db_session,
+        school_id=seeded_users["school"].id,
     )
 
     student = seeded_users["student"]
@@ -203,6 +206,7 @@ async def test_student_progress_calculates_improvement_from_practice(
 ):
     _, topic = await create_subject_and_topic(
         db_session,
+        school_id=seeded_users["school"].id,
     )
 
     student = seeded_users["student"]
@@ -285,6 +289,7 @@ async def test_student_progress_uses_latest_completed_diagnostic_per_topic(
 ):
     _, topic = await create_subject_and_topic(
         db_session,
+        school_id=seeded_users["school"].id,
     )
 
     student = seeded_users["student"]

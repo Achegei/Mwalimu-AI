@@ -98,6 +98,7 @@ async def get_teacher_student_progress(
     progress = await get_student_progress(
         db=db,
         student_id=student.id,
+        school_id=teacher_school_id,
         classroom_id=classroom.id,
     )
 

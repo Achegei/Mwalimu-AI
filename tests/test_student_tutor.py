@@ -46,8 +46,10 @@ class FakeAsyncOpenAI:
 @pytest.fixture
 async def tutor_content(
     db_session,
+    seeded_users,
 ):
     subject = Subject(
+        school_id=seeded_users["school"].id,
         name="Biology",
         slug="biology",
         description="Form 2 Biology",

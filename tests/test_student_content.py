@@ -10,6 +10,7 @@ async def test_student_can_list_subjects(
     seeded_users,
 ):
     subject = Subject(
+        school_id=seeded_users["school"].id,
         name="Biology",
         slug="biology",
         description="Form 2 Biology",
@@ -54,6 +55,7 @@ async def test_student_can_list_topics_for_subject(
     seeded_users,
 ):
     subject = Subject(
+        school_id=seeded_users["school"].id,
         name="Biology",
         slug="biology",
         description="Form 2 Biology",

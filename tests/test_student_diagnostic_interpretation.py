@@ -9,8 +9,10 @@ from app.models.enums import DifficultyLevel, QuestionType
 @pytest.fixture
 async def interpretation_content(
     db_session,
+    seeded_users,
 ):
     subject = Subject(
+        school_id=seeded_users["school"].id,
         name="Biology",
         slug="biology",
         description="Form 2 Biology",

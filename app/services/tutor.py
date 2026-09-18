@@ -15,11 +15,13 @@ from app.models.enums import (
 )
 from app.models.learning_event import LearningEvent
 from app.models.tutor_message import TutorMessage
+from app.services.content import get_active_topic_for_school
 
 
 async def build_tutor_context(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     attempt_id: int,
 ) -> dict:
     """
@@ -46,14 +48,11 @@ async def build_tutor_context(
             "Diagnostic attempt must be completed before starting tutoring."
         )
 
-    topic_result = await db.execute(
-        select(Topic).where(
-            Topic.id == attempt.topic_id,
-            Topic.is_active.is_(True),
-        )
+    topic = await get_active_topic_for_school(
+        db=db,
+        topic_id=attempt.topic_id,
+        school_id=school_id,
     )
-
-    topic = topic_result.scalar_one_or_none()
 
     if topic is None:
         raise ValueError("Topic not found.")
@@ -268,6 +267,7 @@ Begin by addressing the student's main diagnosed area of difficulty.
 async def generate_tutor_response(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     attempt_id: int,
 ) -> str:
     if not settings.ai_tutor_enabled:
@@ -282,6 +282,7 @@ async def generate_tutor_response(
     context = await build_tutor_context(
         db=db,
         student_id=student_id,
+        school_id=school_id,
         attempt_id=attempt_id,
     )
 
@@ -309,6 +310,7 @@ async def generate_tutor_response(
 async def start_tutor_session(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     attempt_id: int,
 ) -> tuple[str, int]:
     """
@@ -337,6 +339,7 @@ async def start_tutor_session(
     tutor_message = await generate_tutor_response(
         db=db,
         student_id=student_id,
+        school_id=school_id,
         attempt_id=attempt_id,
     )
 
@@ -373,6 +376,7 @@ async def start_tutor_session(
 async def continue_tutor_session(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     attempt_id: int,
     student_message: str,
 ) -> tuple[str, int]:
@@ -400,6 +404,7 @@ async def continue_tutor_session(
     context = await build_tutor_context(
         db=db,
         student_id=student_id,
+        school_id=school_id,
         attempt_id=attempt_id,
     )
 

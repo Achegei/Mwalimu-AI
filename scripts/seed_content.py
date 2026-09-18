@@ -4,7 +4,10 @@ from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.models.content import Subject, Topic
+from app.models.school import School
 
+
+DEMO_SCHOOL_CODE = "DEMO-001"
 BIOLOGY_SLUG = "biology"
 
 
@@ -52,17 +55,49 @@ BIOLOGY_TOPICS = [
 ]
 
 
-async def get_or_create_subject(db) -> Subject:
-    result = await db.execute(select(Subject).where(Subject.slug == BIOLOGY_SLUG))
+async def get_school(db) -> School:
+    result = await db.execute(
+        select(School).where(
+            School.code == DEMO_SCHOOL_CODE,
+            School.is_active.is_(True),
+        )
+    )
+
+    school = result.scalar_one_or_none()
+
+    if school is None:
+        raise RuntimeError(
+            "Demo school DEMO-001 does not exist. "
+            "Run scripts/seed_demo.py before scripts/seed_content.py."
+        )
+
+    return school
+
+
+async def get_or_create_subject(
+    db,
+    school: School,
+) -> Subject:
+    result = await db.execute(
+        select(Subject).where(
+            Subject.school_id == school.id,
+            Subject.slug == BIOLOGY_SLUG,
+        )
+    )
+
     subject = result.scalar_one_or_none()
 
     if subject is not None:
         return subject
 
     subject = Subject(
+        school_id=school.id,
         name="Biology",
         slug=BIOLOGY_SLUG,
-        description="Form 2 Biology learning content for the Mwalimu AI MVP.",
+        description=(
+            "Form 2 Biology learning content "
+            "for the Mwalimu AI MVP."
+        ),
         is_active=True,
     )
 
@@ -108,7 +143,12 @@ async def get_or_create_topic(
 async def seed() -> None:
     async with AsyncSessionLocal() as db:
         try:
-            subject = await get_or_create_subject(db)
+            school = await get_school(db)
+
+            subject = await get_or_create_subject(
+                db,
+                school,
+            )
 
             for topic_data in BIOLOGY_TOPICS:
                 await get_or_create_topic(
@@ -120,6 +160,7 @@ async def seed() -> None:
             await db.commit()
 
             print("Biology content seeded successfully.")
+            print(f"School: {school.name}")
             print(f"Subject: {subject.name}")
             print(f"Topics: {len(BIOLOGY_TOPICS)}")
 

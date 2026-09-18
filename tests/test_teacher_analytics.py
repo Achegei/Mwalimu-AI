@@ -14,6 +14,7 @@ async def teacher_analytics_data(
     seeded_users,
 ):
     subject = Subject(
+        school_id=seeded_users["school"].id,
         name="Biology",
         slug="biology",
         description="Form 2 Biology",

@@ -7,6 +7,7 @@ from app.models.assessment import AssessmentAttempt
 from app.models.assessment_answer import AssessmentAnswer
 from app.models.content import Question
 from app.models.enums import AssessmentStatus, AssessmentType
+from app.services.content import get_active_topic_for_school
 
 
 def get_performance_level(score_percentage: float) -> str:
@@ -41,6 +42,7 @@ def build_recommended_action(
 async def interpret_diagnostic_attempt(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     attempt_id: int,
 ) -> dict:
     attempt_result = await db.execute(
@@ -58,6 +60,15 @@ async def interpret_diagnostic_attempt(
 
     if attempt.status != AssessmentStatus.COMPLETED:
         raise ValueError("Diagnostic attempt must be completed before interpretation.")
+
+    topic = await get_active_topic_for_school(
+        db=db,
+        topic_id=attempt.topic_id,
+        school_id=school_id,
+    )
+
+    if topic is None:
+        raise ValueError("Topic not found.")
 
     answer_result = await db.execute(
         select(

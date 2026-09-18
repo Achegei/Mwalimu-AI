@@ -9,6 +9,7 @@ from app.models.enums import AssessmentStatus, AssessmentType
 async def get_student_progress(
     db: AsyncSession,
     student_id: int,
+    school_id: int,
     classroom_id: int | None = None,
 ) -> dict:
     diagnostic_filters = [
@@ -18,6 +19,7 @@ async def get_student_progress(
         AssessmentAttempt.status
         == AssessmentStatus.COMPLETED,
         AssessmentAttempt.score_percentage.is_not(None),
+        Subject.school_id == school_id,
     ]
 
     if classroom_id is not None:
