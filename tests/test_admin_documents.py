@@ -1,10 +1,16 @@
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.models.content import Subject, Topic
-from app.models.enums import UserRole
+from app.models.document import Document
+from app.models.document_chunk import DocumentChunk
+from app.models.enums import (
+    DocumentProcessingStatus,
+    UserRole,
+)
 from app.models.school import School
 from app.models.user import User
 
@@ -108,9 +114,12 @@ async def test_admin_can_upload_document_for_own_school(
         },
         files={
             "file": (
-                "algebra-notes.pdf",
-                b"%PDF-1.4 test document",
-                "application/pdf",
+                "algebra-notes.txt",
+                (
+                    b"Algebra introduces variables, expressions, "
+                    b"equations, and methods for solving them."
+                ),
+                "text/plain",
             ),
         },
     )
@@ -125,10 +134,11 @@ async def test_admin_can_upload_document_for_own_school(
     assert data["title"] == "Form 2 Algebra Notes"
     assert data["document_type"] == "teacher_notes"
     assert data["form_level"] == 2
-    assert data["original_filename"] == "algebra-notes.pdf"
-    assert data["mime_type"] == "application/pdf"
+    assert data["original_filename"] == "algebra-notes.txt"
+    assert data["mime_type"] == "text/plain"
     assert data["file_size"] > 0
-    assert data["processing_status"] == "uploaded"
+    assert data["processing_status"] == "ready"
+    assert data["error_message"] is None
     assert data["is_active"] is True
 
     storage_key = data["storage_key"]
@@ -420,3 +430,150 @@ async def test_unauthenticated_user_cannot_manage_admin_documents(
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_admin_upload_automatically_processes_document(
+    client,
+    db_session,
+    seeded_users,
+    tmp_path,
+    monkeypatch,
+):
+    school = seeded_users["school"]
+
+    subject, _ = await create_subject_and_topic(
+        db_session,
+        school.id,
+    )
+
+    monkeypatch.setenv(
+        "DOCUMENT_STORAGE_PATH",
+        str(tmp_path),
+    )
+
+    headers = await login(
+        client,
+        "admin.test",
+        "Admin123!",
+    )
+
+    response = await client.post(
+        "/admin/documents",
+        headers=headers,
+        data={
+            "title": "Form 1 Biology Notes",
+            "document_type": "textbook",
+            "subject_id": str(subject.id),
+            "form_level": "1",
+        },
+        files={
+            "file": (
+                "biology.txt",
+                (
+                    b"Photosynthesis is the process by which "
+                    b"green plants make food using light energy."
+                ),
+                "text/plain",
+            ),
+        },
+    )
+
+    assert response.status_code == 201
+
+    payload = response.json()
+
+    assert payload["processing_status"] == "ready"
+    assert payload["error_message"] is None
+
+    document_id = payload["id"]
+
+    result = await db_session.execute(
+        select(DocumentChunk)
+        .where(
+            DocumentChunk.document_id == document_id,
+        )
+        .order_by(
+            DocumentChunk.chunk_index.asc(),
+        )
+    )
+
+    chunks = list(result.scalars().all())
+
+    assert len(chunks) == 1
+    assert chunks[0].chunk_index == 0
+    assert "Photosynthesis" in chunks[0].content
+
+
+@pytest.mark.asyncio
+async def test_failed_ingestion_keeps_document_and_file(
+    client,
+    db_session,
+    seeded_users,
+    tmp_path,
+    monkeypatch,
+):
+    school = seeded_users["school"]
+
+    subject, _ = await create_subject_and_topic(
+        db_session,
+        school.id,
+    )
+
+    monkeypatch.setenv(
+        "DOCUMENT_STORAGE_PATH",
+        str(tmp_path),
+    )
+
+    headers = await login(
+        client,
+        "admin.test",
+        "Admin123!",
+    )
+
+    response = await client.post(
+        "/admin/documents",
+        headers=headers,
+        data={
+            "title": "Scanned Biology Paper",
+            "document_type": "past_paper",
+            "subject_id": str(subject.id),
+            "form_level": "1",
+            "exam_year": "2025",
+            "paper_number": "1",
+        },
+        files={
+            "file": (
+                "biology.pdf",
+                (
+                    b"%PDF-1.4\n"
+                    b"not a text-extractable PDF"
+                ),
+                "application/pdf",
+            ),
+        },
+    )
+
+    assert response.status_code == 201
+
+    payload = response.json()
+
+    assert payload["processing_status"] == "failed"
+    assert payload["error_message"]
+
+    document = await db_session.get(
+        Document,
+        payload["id"],
+    )
+
+    assert document is not None
+    assert document.processing_status == (
+        DocumentProcessingStatus.FAILED
+    )
+
+    stored_file = (
+        Path(tmp_path)
+        / document.storage_key
+    )
+
+    assert stored_file.is_file()

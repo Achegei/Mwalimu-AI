@@ -112,6 +112,7 @@ class AdminDocumentSummary(BaseModel):
     mime_type: str
     file_size: int
     processing_status: DocumentProcessingStatus
+    error_message: str | None
     is_active: bool
 
     model_config = {

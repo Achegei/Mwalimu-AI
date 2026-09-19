@@ -31,6 +31,7 @@ from app.services.admin_documents import (
     get_school_documents,
     validate_document_scope,
 )
+from app.services.document_processing import process_document
 from app.services.document_storage import (
     build_document_storage_key,
     delete_document_file,
@@ -180,6 +181,19 @@ async def upload_school_document(
     except Exception:
         delete_document_file(storage_key)
         raise
+
+    try:
+        await process_document(
+            db,
+            document.id,
+        )
+    except (ValueError, OSError):
+        # process_document records the failure state on the
+        # document. Keep the source file so processing can be
+        # retried later.
+        pass
+
+    await db.refresh(document)
 
     return document
 
