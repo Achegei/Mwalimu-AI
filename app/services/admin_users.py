@@ -286,3 +286,244 @@ async def enroll_school_student(
         "is_active": enrollment.is_active,
     }
 
+
+async def bulk_import_school_students(
+    db: AsyncSession,
+    school_id: int,
+    classroom_id: int,
+    rows: list[dict[str, str]],
+) -> dict:
+    """
+    Import students into a school classroom.
+
+    Existing active students in the same school are reused.
+    Existing active enrollments are skipped. Invalid rows are
+    reported individually without preventing valid rows from
+    being processed.
+    """
+
+    classroom_result = await db.execute(
+        select(Classroom.id).where(
+            Classroom.id == classroom_id,
+            Classroom.school_id == school_id,
+        )
+    )
+
+    if classroom_result.scalar_one_or_none() is None:
+        raise ValueError(
+            "Classroom not found in this school."
+        )
+
+    created = 0
+    enrolled = 0
+    skipped = 0
+    failed = 0
+    results: list[dict] = []
+
+    for index, raw_row in enumerate(
+        rows,
+        start=2,
+    ):
+        full_name = str(
+            raw_row.get("full_name") or ""
+        ).strip()
+        login_id = str(
+            raw_row.get("login_id") or ""
+        ).strip()
+        password = str(
+            raw_row.get("password") or ""
+        ).strip()
+
+        if not login_id:
+            failed += 1
+            results.append(
+                {
+                    "row_number": index,
+                    "login_id": "",
+                    "status": "failed",
+                    "message": "Login ID is required.",
+                }
+            )
+            continue
+
+        if not full_name:
+            failed += 1
+            results.append(
+                {
+                    "row_number": index,
+                    "login_id": login_id,
+                    "status": "failed",
+                    "message": "Full name is required.",
+                }
+            )
+            continue
+
+        user_result = await db.execute(
+            select(User).where(
+                User.login_id == login_id,
+            )
+        )
+
+        student = user_result.scalar_one_or_none()
+        student_created = False
+
+        if student is not None:
+            if student.school_id != school_id:
+                failed += 1
+                results.append(
+                    {
+                        "row_number": index,
+                        "login_id": login_id,
+                        "status": "failed",
+                        "message": (
+                            "Login ID belongs to another school."
+                        ),
+                    }
+                )
+                continue
+
+            if student.role != UserRole.STUDENT:
+                failed += 1
+                results.append(
+                    {
+                        "row_number": index,
+                        "login_id": login_id,
+                        "status": "failed",
+                        "message": (
+                            "Login ID does not belong to a student."
+                        ),
+                    }
+                )
+                continue
+
+            if not student.is_active:
+                failed += 1
+                results.append(
+                    {
+                        "row_number": index,
+                        "login_id": login_id,
+                        "status": "failed",
+                        "message": (
+                            "Student account is inactive."
+                        ),
+                    }
+                )
+                continue
+
+        else:
+            if not password:
+                failed += 1
+                results.append(
+                    {
+                        "row_number": index,
+                        "login_id": login_id,
+                        "status": "failed",
+                        "message": (
+                            "Password is required for a new student."
+                        ),
+                    }
+                )
+                continue
+
+            if len(password) < 6:
+                failed += 1
+                results.append(
+                    {
+                        "row_number": index,
+                        "login_id": login_id,
+                        "status": "failed",
+                        "message": (
+                            "Password must contain at least "
+                            "6 characters."
+                        ),
+                    }
+                )
+                continue
+
+            student = User(
+                school_id=school_id,
+                login_id=login_id,
+                full_name=full_name,
+                role=UserRole.STUDENT,
+                password_hash=hash_password(password),
+                is_active=True,
+            )
+
+            db.add(student)
+            await db.flush()
+
+            student_created = True
+
+        enrollment_result = await db.execute(
+            select(Enrollment).where(
+                Enrollment.classroom_id == classroom_id,
+                Enrollment.student_id == student.id,
+            )
+        )
+
+        existing_enrollment = (
+            enrollment_result.scalar_one_or_none()
+        )
+
+        if existing_enrollment is not None:
+            if existing_enrollment.is_active:
+                if student_created:
+                    await db.rollback()
+                    raise RuntimeError(
+                        "Unexpected enrollment state during import."
+                    )
+
+                skipped += 1
+                results.append(
+                    {
+                        "row_number": index,
+                        "login_id": login_id,
+                        "status": "skipped",
+                        "message": (
+                            "Student is already enrolled "
+                            "in this classroom."
+                        ),
+                    }
+                )
+                continue
+
+            existing_enrollment.is_active = True
+
+        else:
+            db.add(
+                Enrollment(
+                    classroom_id=classroom_id,
+                    student_id=student.id,
+                    is_active=True,
+                )
+            )
+
+        if student_created:
+            created += 1
+
+        enrolled += 1
+
+        results.append(
+            {
+                "row_number": index,
+                "login_id": login_id,
+                "status": "enrolled",
+                "message": (
+                    "Student created and enrolled."
+                    if student_created
+                    else "Existing student enrolled."
+                ),
+            }
+        )
+
+    await db.commit()
+
+    return {
+        "total_rows": len(rows),
+        "created": created,
+        "enrolled": enrolled,
+        "skipped": skipped,
+        "failed": failed,
+        "rows": results,
+    }
+

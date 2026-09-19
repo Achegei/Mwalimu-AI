@@ -72,3 +72,23 @@ class AdminEnrollmentStudent(BaseModel):
     full_name: str
     is_active: bool
 
+
+class AdminBulkImportRow(BaseModel):
+    row_number: int
+    login_id: str
+    status: Literal[
+        "enrolled",
+        "skipped",
+        "failed",
+    ]
+    message: str
+
+
+class AdminBulkImportResponse(BaseModel):
+    total_rows: int
+    created: int
+    enrolled: int
+    skipped: int
+    failed: int
+    rows: list[AdminBulkImportRow]
+
