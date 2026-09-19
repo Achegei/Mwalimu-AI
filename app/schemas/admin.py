@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.models.enums import DocumentProcessingStatus, DocumentType
+
 from app.models.enums import UserRole
 
 
@@ -91,4 +93,28 @@ class AdminBulkImportResponse(BaseModel):
     skipped: int
     failed: int
     rows: list[AdminBulkImportRow]
+
+
+class AdminDocumentSummary(BaseModel):
+    id: int
+    school_id: int
+    subject_id: int
+    topic_id: int | None
+    uploaded_by_id: int | None
+    title: str
+    document_type: DocumentType
+    form_level: int
+    academic_year: int | None
+    exam_year: int | None
+    paper_number: str | None
+    original_filename: str
+    storage_key: str
+    mime_type: str
+    file_size: int
+    processing_status: DocumentProcessingStatus
+    is_active: bool
+
+    model_config = {
+        "from_attributes": True,
+    }
 

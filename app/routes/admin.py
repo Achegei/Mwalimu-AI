@@ -5,6 +5,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     UploadFile,
     status,
@@ -14,15 +15,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.dependencies import require_roles
-from app.models.enums import UserRole
+from app.models.enums import DocumentType, UserRole
 from app.models.user import User
 from app.schemas.admin import (
     AdminBulkImportResponse,
     AdminClassroomCreate,
     AdminClassroomSummary,
+    AdminDocumentSummary,
     AdminEnrollmentStudent,
     AdminUserCreate,
     AdminUserSummary,
+)
+from app.services.admin_documents import (
+    create_school_document,
+    get_school_documents,
+    validate_document_scope,
+)
+from app.services.document_storage import (
+    build_document_storage_key,
+    delete_document_file,
+    save_document_bytes,
 )
 from app.services.admin_users import (
     bulk_import_school_students,
@@ -40,6 +52,136 @@ router = APIRouter(
     prefix="/admin",
     tags=["Admin"],
 )
+
+
+@router.get(
+    "/documents",
+    response_model=list[AdminDocumentSummary],
+)
+async def list_school_documents(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> list[AdminDocumentSummary]:
+    documents = await get_school_documents(
+        db=db,
+        school_id=current_user.school_id,
+    )
+
+    return documents
+
+
+@router.post(
+    "/documents",
+    response_model=AdminDocumentSummary,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_school_document(
+    title: str = Form(...),
+    document_type: DocumentType = Form(...),
+    subject_id: int = Form(...),
+    form_level: int = Form(...),
+    topic_id: int | None = Form(None),
+    academic_year: int | None = Form(None),
+    exam_year: int | None = Form(None),
+    paper_number: str | None = Form(None),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> AdminDocumentSummary:
+    clean_title = title.strip()
+
+    if not clean_title:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document title is required.",
+        )
+
+    if form_level < 1 or form_level > 4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Form level must be between 1 and 4.",
+        )
+
+    original_filename = (
+        file.filename or ""
+    ).strip()
+
+    if not original_filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document filename is required.",
+        )
+
+    content = await file.read()
+
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document file cannot be empty.",
+        )
+
+    mime_type = (
+        file.content_type
+        or "application/octet-stream"
+    )
+
+    storage_key = build_document_storage_key(
+        school_id=current_user.school_id,
+        original_filename=original_filename,
+    )
+
+    try:
+        # Validate tenant ownership before writing the file.
+        await validate_document_scope(
+            db=db,
+            school_id=current_user.school_id,
+            subject_id=subject_id,
+            topic_id=topic_id,
+            form_level=form_level,
+        )
+
+        save_document_bytes(
+            storage_key=storage_key,
+            content=content,
+        )
+
+        document = await create_school_document(
+            db=db,
+            school_id=current_user.school_id,
+            uploaded_by_id=current_user.id,
+            subject_id=subject_id,
+            topic_id=topic_id,
+            title=clean_title,
+            document_type=document_type,
+            form_level=form_level,
+            academic_year=academic_year,
+            exam_year=exam_year,
+            paper_number=(
+                paper_number.strip()
+                if paper_number
+                else None
+            ),
+            original_filename=original_filename,
+            storage_key=storage_key,
+            mime_type=mime_type,
+            file_size=len(content),
+        )
+    except ValueError as exc:
+        delete_document_file(storage_key)
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception:
+        delete_document_file(storage_key)
+        raise
+
+    return document
 
 
 @router.get(
