@@ -41,3 +41,22 @@ class LearningEventType(str, Enum):
     PRACTICE_COMPLETED = "practice_completed"
     ASSESSMENT_COMPLETED = "assessment_completed"
     SESSION_COMPLETED = "session_completed"
+
+
+class DocumentType(str, Enum):
+    CURRICULUM = "curriculum"
+    TEXTBOOK = "textbook"
+    TEACHER_NOTES = "teacher_notes"
+    REFERENCE = "reference"
+    REVISION = "revision"
+    PAST_PAPER = "past_paper"
+    MARKING_SCHEME = "marking_scheme"
+    MOCK_EXAM = "mock_exam"
+    OTHER = "other"
+
+
+class DocumentProcessingStatus(str, Enum):
+    UPLOADED = "uploaded"
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
