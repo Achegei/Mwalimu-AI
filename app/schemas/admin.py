@@ -36,3 +36,32 @@ class AdminUserCreate(BaseModel):
         max_length=128,
     )
 
+
+class AdminClassroomSummary(BaseModel):
+    id: int
+    school_id: int
+    teacher_id: int | None
+    name: str
+    form_level: int
+    academic_year: int
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class AdminClassroomCreate(BaseModel):
+    name: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+    form_level: int = Field(
+        ge=1,
+        le=4,
+    )
+    academic_year: int = Field(
+        ge=2000,
+        le=2100,
+    )
+    teacher_id: int | None = None
+
