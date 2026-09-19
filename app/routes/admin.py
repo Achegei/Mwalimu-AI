@@ -8,12 +8,15 @@ from app.models.user import User
 from app.schemas.admin import (
     AdminClassroomCreate,
     AdminClassroomSummary,
+    AdminEnrollmentStudent,
     AdminUserCreate,
     AdminUserSummary,
 )
 from app.services.admin_users import (
     create_school_classroom,
     create_school_user,
+    enroll_school_student,
+    get_school_classroom_students,
     get_school_classrooms,
     get_school_users,
 )
@@ -126,4 +129,69 @@ async def create_classroom(
         )
 
     return classroom
+
+
+@router.get(
+    "/classrooms/{classroom_id}/students",
+    response_model=list[AdminEnrollmentStudent],
+)
+async def list_classroom_students(
+    classroom_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> list[AdminEnrollmentStudent]:
+    try:
+        students = await get_school_classroom_students(
+            db=db,
+            school_id=current_user.school_id,
+            classroom_id=classroom_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+
+    return [
+        AdminEnrollmentStudent(**student)
+        for student in students
+    ]
+
+
+@router.post(
+    "/classrooms/{classroom_id}/students/{student_id}",
+    response_model=AdminEnrollmentStudent,
+    status_code=status.HTTP_201_CREATED,
+)
+async def enroll_student(
+    classroom_id: int,
+    student_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> AdminEnrollmentStudent:
+    try:
+        student = await enroll_school_student(
+            db=db,
+            school_id=current_user.school_id,
+            classroom_id=classroom_id,
+            student_id=student_id,
+        )
+    except ValueError as exc:
+        detail = str(exc)
+
+        if "already enrolled" in detail:
+            status_code = status.HTTP_409_CONFLICT
+        else:
+            status_code = status.HTTP_400_BAD_REQUEST
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=detail,
+        )
+
+    return AdminEnrollmentStudent(**student)
 

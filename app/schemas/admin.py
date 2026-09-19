@@ -65,3 +65,10 @@ class AdminClassroomCreate(BaseModel):
     )
     teacher_id: int | None = None
 
+
+class AdminEnrollmentStudent(BaseModel):
+    student_id: int
+    login_id: str
+    full_name: str
+    is_active: bool
+

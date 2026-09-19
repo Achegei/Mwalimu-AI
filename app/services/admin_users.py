@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
 from app.models.classroom import Classroom
+from app.models.enrollment import Enrollment
 from app.models.enums import UserRole
 from app.models.user import User
 
@@ -153,4 +154,135 @@ async def create_school_classroom(
     await db.refresh(classroom)
 
     return classroom
+
+
+async def get_school_classroom_students(
+    db: AsyncSession,
+    school_id: int,
+    classroom_id: int,
+) -> list[dict]:
+    """
+    Return active enrollments for a classroom belonging
+    to the authenticated admin's school.
+    """
+
+    classroom_result = await db.execute(
+        select(Classroom.id).where(
+            Classroom.id == classroom_id,
+            Classroom.school_id == school_id,
+        )
+    )
+
+    if classroom_result.scalar_one_or_none() is None:
+        raise ValueError(
+            "Classroom not found in this school."
+        )
+
+    result = await db.execute(
+        select(
+            User.id,
+            User.login_id,
+            User.full_name,
+            Enrollment.is_active,
+        )
+        .join(
+            Enrollment,
+            Enrollment.student_id == User.id,
+        )
+        .where(
+            Enrollment.classroom_id == classroom_id,
+            User.school_id == school_id,
+            User.role == UserRole.STUDENT,
+        )
+        .order_by(
+            User.full_name.asc(),
+            User.id.asc(),
+        )
+    )
+
+    return [
+        {
+            "student_id": row.id,
+            "login_id": row.login_id,
+            "full_name": row.full_name,
+            "is_active": row.is_active,
+        }
+        for row in result.all()
+    ]
+
+
+async def enroll_school_student(
+    db: AsyncSession,
+    school_id: int,
+    classroom_id: int,
+    student_id: int,
+) -> dict:
+    """
+    Enroll an active student into a classroom.
+
+    Both the classroom and student must belong to the
+    authenticated admin's school.
+    """
+
+    classroom_result = await db.execute(
+        select(Classroom.id).where(
+            Classroom.id == classroom_id,
+            Classroom.school_id == school_id,
+        )
+    )
+
+    if classroom_result.scalar_one_or_none() is None:
+        raise ValueError(
+            "Classroom not found in this school."
+        )
+
+    student_result = await db.execute(
+        select(User).where(
+            User.id == student_id,
+            User.school_id == school_id,
+            User.role == UserRole.STUDENT,
+            User.is_active.is_(True),
+        )
+    )
+
+    student = student_result.scalar_one_or_none()
+
+    if student is None:
+        raise ValueError(
+            "Active student not found in this school."
+        )
+
+    enrollment_result = await db.execute(
+        select(Enrollment).where(
+            Enrollment.classroom_id == classroom_id,
+            Enrollment.student_id == student_id,
+        )
+    )
+
+    existing_enrollment = (
+        enrollment_result.scalar_one_or_none()
+    )
+
+    if existing_enrollment is not None:
+        raise ValueError(
+            "Student is already enrolled in this classroom."
+        )
+
+    enrollment = Enrollment(
+        classroom_id=classroom_id,
+        student_id=student_id,
+        is_active=True,
+    )
+
+    db.add(enrollment)
+
+    await db.commit()
+    await db.refresh(enrollment)
+
+    return {
+        "student_id": student.id,
+        "login_id": student.login_id,
+        "full_name": student.full_name,
+        "is_active": enrollment.is_active,
+    }
 
