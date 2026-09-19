@@ -90,3 +90,24 @@ def delete_document_file(
         destination.unlink()
     except FileNotFoundError:
         pass
+
+
+def read_document_bytes(
+    storage_key: str,
+) -> bytes:
+    """
+    Read a stored document from the configured document storage.
+
+    The storage key is resolved relative to the same root used
+    when document files are saved.
+    """
+
+    storage_root = get_document_storage_root()
+    source = storage_root / storage_key
+
+    if not source.is_file():
+        raise FileNotFoundError(
+            f"Stored document not found: {storage_key}"
+        )
+
+    return source.read_bytes()

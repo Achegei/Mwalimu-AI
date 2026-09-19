@@ -3,6 +3,7 @@ from app.models.assessment_answer import AssessmentAnswer
 from app.models.assessment_question import AssessmentQuestion
 from app.models.classroom import Classroom
 from app.models.document import Document
+from app.models.document_chunk import DocumentChunk
 from app.models.content import Question, Subject, Topic
 from app.models.enrollment import Enrollment
 from app.models.learning_event import LearningEvent
@@ -16,6 +17,7 @@ __all__ = [
     "AssessmentQuestion",
     "Classroom",
     "Document",
+    "DocumentChunk",
     "Enrollment",
     "LearningEvent",
     "Question",
