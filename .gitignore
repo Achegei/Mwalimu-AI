@@ -175,7 +175,7 @@ pnpm-debug.log*
 # Local AI / ML Artifacts
 # ------------------------------------------------------------
 
-models/
+/models/
 *.pkl
 *.joblib
 *.onnx
