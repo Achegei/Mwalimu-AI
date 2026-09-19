@@ -116,10 +116,22 @@ async def seeded_users(
         is_active=True,
     )
 
+    admin = User(
+        school_id=school.id,
+        login_id="admin.test",
+        full_name="Test School Admin",
+        role=UserRole.ADMIN,
+        password_hash=hash_password(
+            "Admin123!"
+        ),
+        is_active=True,
+    )
+
     db_session.add_all(
         [
             teacher,
             student,
+            admin,
         ]
     )
 
@@ -150,6 +162,7 @@ async def seeded_users(
         "school": school,
         "teacher": teacher,
         "student": student,
+        "admin": admin,
         "classroom": classroom,
         "enrollment": enrollment,
     }

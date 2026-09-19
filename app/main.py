@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import engine
+from app.routes.admin import router as admin_router
 from app.routes.auth import router as auth_router
 from app.routes.student import router as student_router
 from app.routes.teacher import router as teacher_router
@@ -35,6 +36,7 @@ templates = Jinja2Templates(
 app.include_router(auth_router)
 app.include_router(student_router)
 app.include_router(teacher_router)
+app.include_router(admin_router)
 
 
 @app.get(

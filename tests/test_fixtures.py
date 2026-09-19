@@ -15,6 +15,7 @@ async def test_seeded_users_exist(
 
     users = result.scalars().all()
 
-    assert len(users) == 2
+    assert len(users) == 3
     assert users[0].login_id == "teacher.test"
     assert users[1].login_id == "student.test"
+    assert users[2].login_id == "admin.test"
