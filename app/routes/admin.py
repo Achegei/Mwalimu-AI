@@ -32,6 +32,7 @@ from app.services.admin_users import (
     get_school_classroom_students,
     get_school_classrooms,
     get_school_users,
+    remove_school_student_enrollment,
 )
 
 
@@ -359,6 +360,34 @@ async def enroll_student(
         raise HTTPException(
             status_code=status_code,
             detail=detail,
+        )
+
+    return AdminEnrollmentStudent(**student)
+
+
+@router.delete(
+    "/classrooms/{classroom_id}/students/{student_id}",
+    response_model=AdminEnrollmentStudent,
+)
+async def remove_student_enrollment(
+    classroom_id: int,
+    student_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> AdminEnrollmentStudent:
+    try:
+        student = await remove_school_student_enrollment(
+            db=db,
+            school_id=current_user.school_id,
+            classroom_id=classroom_id,
+            student_id=student_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
         )
 
     return AdminEnrollmentStudent(**student)

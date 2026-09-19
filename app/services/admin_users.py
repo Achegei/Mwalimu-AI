@@ -191,6 +191,7 @@ async def get_school_classroom_students(
         )
         .where(
             Enrollment.classroom_id == classroom_id,
+            Enrollment.is_active.is_(True),
             User.school_id == school_id,
             User.role == UserRole.STUDENT,
         )
@@ -264,17 +265,22 @@ async def enroll_school_student(
     )
 
     if existing_enrollment is not None:
-        raise ValueError(
-            "Student is already enrolled in this classroom."
+        if existing_enrollment.is_active:
+            raise ValueError(
+                "Student is already enrolled in this classroom."
+            )
+
+        existing_enrollment.is_active = True
+        enrollment = existing_enrollment
+
+    else:
+        enrollment = Enrollment(
+            classroom_id=classroom_id,
+            student_id=student_id,
+            is_active=True,
         )
 
-    enrollment = Enrollment(
-        classroom_id=classroom_id,
-        student_id=student_id,
-        is_active=True,
-    )
-
-    db.add(enrollment)
+        db.add(enrollment)
 
     await db.commit()
     await db.refresh(enrollment)
@@ -525,5 +531,74 @@ async def bulk_import_school_students(
         "skipped": skipped,
         "failed": failed,
         "rows": results,
+    }
+
+
+async def remove_school_student_enrollment(
+    db: AsyncSession,
+    school_id: int,
+    classroom_id: int,
+    student_id: int,
+) -> dict:
+    """
+    Deactivate a student's enrollment in a classroom.
+
+    Both the classroom and student must belong to the
+    authenticated admin's school. The enrollment record
+    is retained so that it can be reactivated later.
+    """
+
+    classroom_result = await db.execute(
+        select(Classroom.id).where(
+            Classroom.id == classroom_id,
+            Classroom.school_id == school_id,
+        )
+    )
+
+    if classroom_result.scalar_one_or_none() is None:
+        raise ValueError(
+            "Classroom not found in this school."
+        )
+
+    student_result = await db.execute(
+        select(User).where(
+            User.id == student_id,
+            User.school_id == school_id,
+            User.role == UserRole.STUDENT,
+        )
+    )
+
+    student = student_result.scalar_one_or_none()
+
+    if student is None:
+        raise ValueError(
+            "Student not found in this school."
+        )
+
+    enrollment_result = await db.execute(
+        select(Enrollment).where(
+            Enrollment.classroom_id == classroom_id,
+            Enrollment.student_id == student_id,
+            Enrollment.is_active.is_(True),
+        )
+    )
+
+    enrollment = enrollment_result.scalar_one_or_none()
+
+    if enrollment is None:
+        raise ValueError(
+            "Active enrollment not found."
+        )
+
+    enrollment.is_active = False
+
+    await db.commit()
+    await db.refresh(enrollment)
+
+    return {
+        "student_id": student.id,
+        "login_id": student.login_id,
+        "full_name": student.full_name,
+        "is_active": enrollment.is_active,
     }
 
