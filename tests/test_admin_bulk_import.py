@@ -466,7 +466,6 @@ async def test_bulk_import_rejects_foreign_classroom(
 
     classroom = Classroom(
         school_id=other_school.id,
-        teacher_id=None,
         name="Foreign Bulk Classroom",
         form_level=2,
         academic_year=2026,

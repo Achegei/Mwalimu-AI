@@ -12,6 +12,7 @@ from app.models.enums import (
     AssessmentType,
     UserRole,
 )
+from app.models.teaching_assignment import TeachingAssignment
 from app.models.user import User
 
 
@@ -310,13 +311,23 @@ async def test_teacher_cannot_access_student_through_another_classroom(
 
     other_classroom = Classroom(
         school_id=school.id,
-        teacher_id=teacher.id,
         name="Other Form 2 Class",
         form_level=2,
         academic_year=2026,
     )
 
     db_session.add(other_classroom)
+    await db_session.flush()
+
+    teaching_assignment = TeachingAssignment(
+        school_id=school.id,
+        teacher_id=teacher.id,
+        subject_id=seeded_users["subject"].id,
+        classroom_id=other_classroom.id,
+        is_active=True,
+    )
+
+    db_session.add(teaching_assignment)
     await db_session.flush()
 
     headers = await login_teacher(client)
@@ -410,7 +421,6 @@ async def test_teacher_student_progress_is_scoped_to_requested_classroom(
 
     other_classroom = Classroom(
         school_id=school.id,
-        teacher_id=teacher.id,
         name="Second Form 2 Class",
         form_level=2,
         academic_year=2026,

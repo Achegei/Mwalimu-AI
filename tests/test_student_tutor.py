@@ -2,10 +2,13 @@ import pytest
 from sqlalchemy import select
 
 from app.models.content import Question, Subject, Topic
+from app.models.classroom import Classroom
 from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
+from app.models.enrollment import Enrollment
 from app.models.enums import (
     DocumentProcessingStatus,
+    DocumentScope,
     DocumentType,
     DifficultyLevel,
     LearningEventType,
@@ -13,6 +16,7 @@ from app.models.enums import (
 )
 from app.models.learning_event import LearningEvent
 from app.models.school import School
+from app.models.teaching_assignment import TeachingAssignment
 from app.models.tutor_message import TutorMessage
 
 
@@ -691,3 +695,176 @@ async def test_tutor_prompt_excludes_other_school_document_context(
     assert "FOREIGN SCHOOL SECRET CONTENT" not in prompt
     assert "Foreign School Secret Reference" not in prompt
     assert "page 99" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_tutor_prompt_excludes_other_classroom_assignment_document(
+    client,
+    db_session,
+    seeded_users,
+    tutor_content,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "app.services.tutor.AsyncOpenAI",
+        FakeAsyncOpenAI,
+    )
+
+    school = seeded_users["school"]
+    student = seeded_users["student"]
+    subject = tutor_content["subject"]
+    topic = tutor_content["topic"]
+
+    # The shared seeded_users fixture already gives this student one
+    # active classroom enrollment. Reuse that classroom so the test
+    # preserves the application's single-active-enrollment invariant.
+    own_classroom = seeded_users["classroom"]
+
+    other_classroom = Classroom(
+        school_id=school.id,
+        name="Tutor Other Class",
+        form_level=topic.form_level,
+        academic_year=2026,
+    )
+
+    db_session.add(other_classroom)
+    await db_session.flush()
+
+    own_assignment = TeachingAssignment(
+        school_id=school.id,
+        teacher_id=seeded_users["teacher"].id,
+        subject_id=subject.id,
+        classroom_id=own_classroom.id,
+        is_active=True,
+    )
+
+    other_assignment = TeachingAssignment(
+        school_id=school.id,
+        teacher_id=seeded_users["teacher"].id,
+        subject_id=subject.id,
+        classroom_id=other_classroom.id,
+        is_active=True,
+    )
+
+    db_session.add_all(
+        [
+            own_assignment,
+            other_assignment,
+        ]
+    )
+    await db_session.flush()
+
+    own_document = Document(
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        scope=DocumentScope.TEACHING_ASSIGNMENT,
+        teaching_assignment_id=own_assignment.id,
+        uploaded_by_id=seeded_users["teacher"].id,
+        title="Own Classroom Biology Notes",
+        document_type=DocumentType.TEACHER_NOTES,
+        form_level=topic.form_level,
+        academic_year=2026,
+        exam_year=None,
+        paper_number=None,
+        original_filename="own-classroom-notes.txt",
+        storage_key="tests/own-classroom-notes.txt",
+        mime_type="text/plain",
+        file_size=100,
+        processing_status=DocumentProcessingStatus.READY,
+        error_message=None,
+        metadata_json=None,
+        is_active=True,
+    )
+
+    other_document = Document(
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        scope=DocumentScope.TEACHING_ASSIGNMENT,
+        teaching_assignment_id=other_assignment.id,
+        uploaded_by_id=seeded_users["teacher"].id,
+        title="Other Classroom Secret Notes",
+        document_type=DocumentType.TEACHER_NOTES,
+        form_level=topic.form_level,
+        academic_year=2026,
+        exam_year=None,
+        paper_number=None,
+        original_filename="other-classroom-secret.txt",
+        storage_key="tests/other-classroom-secret.txt",
+        mime_type="text/plain",
+        file_size=100,
+        processing_status=DocumentProcessingStatus.READY,
+        error_message=None,
+        metadata_json=None,
+        is_active=True,
+    )
+
+    db_session.add_all(
+        [
+            own_document,
+            other_document,
+        ]
+    )
+    await db_session.flush()
+
+    own_fact = (
+        "OWN CLASSROOM ASSIGNMENT FACT: "
+        "Red blood cells contain haemoglobin and transport oxygen."
+    )
+
+    other_fact = (
+        "OTHER CLASSROOM SECRET FACT: "
+        "Red blood cells contain haemoglobin and transport oxygen."
+    )
+
+    db_session.add_all(
+        [
+            DocumentChunk(
+                document_id=own_document.id,
+                chunk_index=0,
+                content=own_fact,
+                page_number=11,
+                character_count=len(own_fact),
+                metadata_json=None,
+            ),
+            DocumentChunk(
+                document_id=other_document.id,
+                chunk_index=0,
+                content=other_fact,
+                page_number=77,
+                character_count=len(other_fact),
+                metadata_json=None,
+            ),
+        ]
+    )
+
+    await db_session.commit()
+
+    FakeResponses.last_input = None
+
+    headers = await student_headers(client)
+
+    attempt_id = await create_completed_diagnostic(
+        client=client,
+        headers=headers,
+        topic_id=topic.id,
+    )
+
+    response = await client.post(
+        f"/student/diagnostic/{attempt_id}/tutor/start",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert FakeResponses.last_input is not None
+
+    prompt = FakeResponses.last_input
+
+    assert "OWN CLASSROOM ASSIGNMENT FACT" in prompt
+    assert "Own Classroom Biology Notes" in prompt
+    assert "page 11" in prompt
+
+    assert "OTHER CLASSROOM SECRET FACT" not in prompt
+    assert "Other Classroom Secret Notes" not in prompt
+    assert "page 77" not in prompt

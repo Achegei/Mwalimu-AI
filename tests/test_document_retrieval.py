@@ -1,13 +1,16 @@
 import pytest
 
+from app.models.classroom import Classroom
 from app.models.content import Subject, Topic
 from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
 from app.models.enums import (
     DocumentProcessingStatus,
+    DocumentScope,
     DocumentType,
 )
 from app.models.school import School
+from app.models.teaching_assignment import TeachingAssignment
 from app.services.document_retrieval import (
     retrieve_document_context,
 )
@@ -801,3 +804,271 @@ async def test_retrieval_ranks_stronger_match_first(
     assert results[0]["score"] > results[1]["score"]
 
     assert "Consumer demand" in results[0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_student_retrieval_includes_common_and_own_assignment_documents(
+    db_session,
+    seeded_users,
+):
+    school = seeded_users["school"]
+    student = seeded_users["student"]
+    subject = seeded_users["subject"]
+    assignment = seeded_users["teaching_assignment"]
+
+    topic = Topic(
+        subject_id=subject.id,
+        slug="authorized-retrieval-energy",
+        title="Energy",
+        summary=None,
+        form_level=2,
+        order_index=1,
+        is_active=True,
+    )
+    db_session.add(topic)
+    await db_session.flush()
+
+    common_document = await create_document_with_chunks(
+        db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        title="Common Energy Material",
+        contents=[
+            "Energy can be transferred between different stores.",
+        ],
+    )
+
+    assignment_document = await create_document_with_chunks(
+        db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        title="Teacher Energy Notes",
+        contents=[
+            "Energy transfer can occur through heating and radiation.",
+        ],
+    )
+
+    assignment_document.scope = DocumentScope.TEACHING_ASSIGNMENT
+    assignment_document.teaching_assignment_id = assignment.id
+
+    await db_session.commit()
+
+    results = await retrieve_document_context(
+        db=db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        query="energy transfer heating radiation stores",
+        student_id=student.id,
+        limit=10,
+    )
+
+    document_ids = {
+        result["document_id"]
+        for result in results
+    }
+
+    assert common_document.id in document_ids
+    assert assignment_document.id in document_ids
+
+
+@pytest.mark.asyncio
+async def test_student_retrieval_excludes_other_classroom_assignment_document(
+    db_session,
+    seeded_users,
+):
+    school = seeded_users["school"]
+    teacher = seeded_users["teacher"]
+    student = seeded_users["student"]
+    subject = seeded_users["subject"]
+
+    topic = Topic(
+        subject_id=subject.id,
+        slug="other-classroom-retrieval",
+        title="Other Classroom Retrieval",
+        summary=None,
+        form_level=2,
+        order_index=1,
+        is_active=True,
+    )
+
+    other_classroom = Classroom(
+        school_id=school.id,
+        name="Form 2 Other Retrieval",
+        form_level=2,
+        academic_year=2026,
+    )
+
+    db_session.add_all([
+        topic,
+        other_classroom,
+    ])
+    await db_session.flush()
+
+    other_assignment = TeachingAssignment(
+        school_id=school.id,
+        teacher_id=teacher.id,
+        subject_id=subject.id,
+        classroom_id=other_classroom.id,
+        is_active=True,
+    )
+    db_session.add(other_assignment)
+    await db_session.flush()
+
+    other_document = await create_document_with_chunks(
+        db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        title="Other Classroom Private Notes",
+        contents=[
+            "Mitochondria release energy in OTHER CLASSROOM NOTES.",
+        ],
+    )
+
+    other_document.scope = DocumentScope.TEACHING_ASSIGNMENT
+    other_document.teaching_assignment_id = other_assignment.id
+
+    await db_session.commit()
+
+    results = await retrieve_document_context(
+        db=db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        query="mitochondria release energy classroom notes",
+        student_id=student.id,
+        limit=10,
+    )
+
+    assert all(
+        result["document_id"] != other_document.id
+        for result in results
+    )
+
+    assert all(
+        "OTHER CLASSROOM NOTES" not in result["content"]
+        for result in results
+    )
+
+
+@pytest.mark.asyncio
+async def test_inactive_teaching_assignment_cannot_authorize_student_retrieval(
+    db_session,
+    seeded_users,
+):
+    school = seeded_users["school"]
+    student = seeded_users["student"]
+    subject = seeded_users["subject"]
+    assignment = seeded_users["teaching_assignment"]
+
+    topic = Topic(
+        subject_id=subject.id,
+        slug="inactive-assignment-retrieval",
+        title="Inactive Assignment Retrieval",
+        summary=None,
+        form_level=2,
+        order_index=1,
+        is_active=True,
+    )
+    db_session.add(topic)
+    await db_session.flush()
+
+    assignment_document = await create_document_with_chunks(
+        db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        title="Inactive Assignment Notes",
+        contents=[
+            "Diffusion moves particles in INACTIVE ASSIGNMENT NOTES.",
+        ],
+    )
+
+    assignment_document.scope = DocumentScope.TEACHING_ASSIGNMENT
+    assignment_document.teaching_assignment_id = assignment.id
+    assignment.is_active = False
+
+    await db_session.commit()
+
+    results = await retrieve_document_context(
+        db=db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        query="diffusion particles inactive assignment notes",
+        student_id=student.id,
+        limit=10,
+    )
+
+    assert all(
+        result["document_id"] != assignment_document.id
+        for result in results
+    )
+
+
+@pytest.mark.asyncio
+async def test_inactive_enrollment_cannot_authorize_student_retrieval(
+    db_session,
+    seeded_users,
+):
+    school = seeded_users["school"]
+    student = seeded_users["student"]
+    subject = seeded_users["subject"]
+    assignment = seeded_users["teaching_assignment"]
+    enrollment = seeded_users["enrollment"]
+
+    topic = Topic(
+        subject_id=subject.id,
+        slug="inactive-enrollment-retrieval",
+        title="Inactive Enrollment Retrieval",
+        summary=None,
+        form_level=2,
+        order_index=1,
+        is_active=True,
+    )
+    db_session.add(topic)
+    await db_session.flush()
+
+    assignment_document = await create_document_with_chunks(
+        db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        title="Inactive Enrollment Notes",
+        contents=[
+            "Osmosis moves water in INACTIVE ENROLLMENT NOTES.",
+        ],
+    )
+
+    assignment_document.scope = DocumentScope.TEACHING_ASSIGNMENT
+    assignment_document.teaching_assignment_id = assignment.id
+    enrollment.is_active = False
+
+    await db_session.commit()
+
+    results = await retrieve_document_context(
+        db=db_session,
+        school_id=school.id,
+        subject_id=subject.id,
+        topic_id=topic.id,
+        form_level=2,
+        query="osmosis water inactive enrollment notes",
+        student_id=student.id,
+        limit=10,
+    )
+
+    assert all(
+        result["document_id"] != assignment_document.id
+        for result in results
+    )

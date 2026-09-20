@@ -43,6 +43,11 @@ class LearningEventType(str, Enum):
     SESSION_COMPLETED = "session_completed"
 
 
+class DocumentScope(str, Enum):
+    COMMON = "common"
+    TEACHING_ASSIGNMENT = "teaching_assignment"
+
+
 class DocumentType(str, Enum):
     CURRICULUM = "curriculum"
     TEXTBOOK = "textbook"

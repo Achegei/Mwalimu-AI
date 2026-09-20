@@ -8,6 +8,7 @@ from app.models.content import Question, Subject, Topic
 from app.models.enrollment import Enrollment
 from app.models.learning_event import LearningEvent
 from app.models.school import School
+from app.models.teaching_assignment import TeachingAssignment
 from app.models.tutor_message import TutorMessage
 from app.models.user import User
 
@@ -24,6 +25,7 @@ __all__ = [
     "School",
     "Subject",
     "Topic",
+    "TeachingAssignment",
     "TutorMessage",
     "User",
 ]

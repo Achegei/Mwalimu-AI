@@ -15,6 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, TimestampMixin
 from app.models.enums import (
     DocumentProcessingStatus,
+    DocumentScope,
     DocumentType,
 )
 
@@ -38,6 +39,28 @@ class Document(TimestampMixin, Base):
 
     topic_id: Mapped[int | None] = mapped_column(
         ForeignKey("topics.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+
+    scope: Mapped[DocumentScope] = mapped_column(
+        Enum(
+            DocumentScope,
+            name="document_scope",
+            values_callable=lambda enum: [
+                item.value for item in enum
+            ],
+        ),
+        default=DocumentScope.COMMON,
+        index=True,
+        nullable=False,
+    )
+
+    teaching_assignment_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "teaching_assignments.id",
+            ondelete="CASCADE",
+        ),
         index=True,
         nullable=True,
     )

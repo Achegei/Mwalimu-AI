@@ -152,6 +152,9 @@ temp/
 uploads/
 generated/
 
+# School document storage
+/storage/documents/
+
 
 # ------------------------------------------------------------
 # Docker

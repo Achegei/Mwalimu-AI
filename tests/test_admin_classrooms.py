@@ -54,7 +54,7 @@ async def test_admin_can_list_classrooms_in_own_school(
     assert len(data) == 1
     assert data[0]["id"] == classroom.id
     assert data[0]["school_id"] == seeded_users["school"].id
-    assert data[0]["teacher_id"] == seeded_users["teacher"].id
+    assert "teacher_id" not in data[0]
     assert data[0]["name"] == classroom.name
     assert data[0]["form_level"] == classroom.form_level
     assert data[0]["academic_year"] == classroom.academic_year
@@ -89,7 +89,6 @@ async def test_admin_classroom_list_excludes_other_school(
 
     foreign_classroom = Classroom(
         school_id=other_school.id,
-        teacher_id=foreign_teacher.id,
         name="Foreign Form 2",
         form_level=2,
         academic_year=2026,
@@ -120,7 +119,7 @@ async def test_admin_classroom_list_excludes_other_school(
 
 
 @pytest.mark.asyncio
-async def test_admin_can_create_classroom_with_own_teacher(
+async def test_admin_can_create_classroom(
     client,
     seeded_users,
 ):
@@ -130,8 +129,6 @@ async def test_admin_can_create_classroom_with_own_teacher(
         "Admin123!",
     )
 
-    teacher = seeded_users["teacher"]
-
     response = await client.post(
         "/admin/classrooms",
         headers=headers,
@@ -139,7 +136,6 @@ async def test_admin_can_create_classroom_with_own_teacher(
             "name": "Form 3 East",
             "form_level": 3,
             "academic_year": 2026,
-            "teacher_id": teacher.id,
         },
     )
 
@@ -148,14 +144,14 @@ async def test_admin_can_create_classroom_with_own_teacher(
     data = response.json()
 
     assert data["school_id"] == seeded_users["school"].id
-    assert data["teacher_id"] == teacher.id
+    assert "teacher_id" not in data
     assert data["name"] == "Form 3 East"
     assert data["form_level"] == 3
     assert data["academic_year"] == 2026
 
 
 @pytest.mark.asyncio
-async def test_admin_can_create_classroom_without_teacher(
+async def test_admin_classroom_response_has_no_teacher_id(
     client,
     seeded_users,
 ):
@@ -172,7 +168,6 @@ async def test_admin_can_create_classroom_without_teacher(
             "name": "Form 4 West",
             "form_level": 4,
             "academic_year": 2026,
-            "teacher_id": None,
         },
     )
 
@@ -181,81 +176,7 @@ async def test_admin_can_create_classroom_without_teacher(
     data = response.json()
 
     assert data["school_id"] == seeded_users["school"].id
-    assert data["teacher_id"] is None
-
-
-@pytest.mark.asyncio
-async def test_admin_cannot_assign_foreign_school_teacher(
-    client,
-    db_session,
-    seeded_users,
-):
-    other_school = School(
-        name="Other Teacher School",
-        code="OTHER-TEACHER-001",
-        is_active=True,
-    )
-
-    db_session.add(other_school)
-    await db_session.flush()
-
-    foreign_teacher = User(
-        school_id=other_school.id,
-        login_id="foreign.assignment.teacher",
-        full_name="Foreign Assignment Teacher",
-        role=UserRole.TEACHER,
-        password_hash=hash_password("Foreign123!"),
-        is_active=True,
-    )
-
-    db_session.add(foreign_teacher)
-    await db_session.commit()
-
-    headers = await login(
-        client,
-        "admin.test",
-        "Admin123!",
-    )
-
-    response = await client.post(
-        "/admin/classrooms",
-        headers=headers,
-        json={
-            "name": "Unsafe Classroom",
-            "form_level": 2,
-            "academic_year": 2026,
-            "teacher_id": foreign_teacher.id,
-        },
-    )
-
-    assert response.status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_admin_cannot_assign_student_as_teacher(
-    client,
-    seeded_users,
-):
-    headers = await login(
-        client,
-        "admin.test",
-        "Admin123!",
-    )
-
-    student = seeded_users["student"]
-
-    response = await client.post(
-        "/admin/classrooms",
-        headers=headers,
-        json={
-            "name": "Invalid Teacher Classroom",
-            "form_level": 2,
-            "academic_year": 2026,
-            "teacher_id": student.id,
-        },
-    )
-
-    assert response.status_code == 400
+    assert "teacher_id" not in data
 
 
 @pytest.mark.asyncio
@@ -278,7 +199,6 @@ async def test_admin_cannot_create_duplicate_classroom(
             "name": classroom.name,
             "form_level": classroom.form_level,
             "academic_year": classroom.academic_year,
-            "teacher_id": seeded_users["teacher"].id,
         },
     )
 
@@ -308,7 +228,6 @@ async def test_teacher_cannot_manage_admin_classrooms(
             "name": "Forbidden Classroom",
             "form_level": 2,
             "academic_year": 2026,
-            "teacher_id": None,
         },
     )
 
@@ -349,7 +268,6 @@ async def test_unauthenticated_user_cannot_manage_admin_classrooms(
             "name": "Unauthorized Classroom",
             "form_level": 2,
             "academic_year": 2026,
-            "teacher_id": None,
         },
     )
 

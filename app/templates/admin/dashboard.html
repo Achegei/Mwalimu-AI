@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard | Mwalimu AI{% endblock %}
+
+{% block body_class %}admin-dashboard{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-2">
+
+    <span
+        id="admin-name"
+        class="text-muted"
+    >
+        Administrator
+    </span>
+
+    <button
+        id="logout-button"
+        type="button"
+        class="button button--secondary"
+    >
+        Log out
+    </button>
+
+</div>
+{% endblock %}
+
+{% block navigation %}
+<nav class="app-nav">
+    <div class="container app-nav__inner">
+
+        <a
+            href="/admin/dashboard"
+            class="app-nav__link app-nav__link--active"
+        >
+            Dashboard
+        </a>
+
+        <a
+            href="#document-library"
+            class="app-nav__link"
+        >
+            Document Library
+        </a>
+
+    </div>
+</nav>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+
+    <p class="page-header__eyebrow">
+        School Administration
+    </p>
+
+    <h1 class="page-header__title">
+        Manage your school
+    </h1>
+
+    <p class="page-header__description">
+        Manage school resources and the curriculum material
+        used to support Mwalimu AI tutoring.
+    </p>
+
+</div>
+{% endblock %}
+
+{% block content %}
+
+<section
+    id="admin-dashboard-content"
+    aria-live="polite"
+>
+
+    <div
+        id="admin-dashboard-error"
+        class="alert alert--error"
+        hidden
+    ></div>
+
+    <div
+        id="admin-dashboard-loading"
+        class="card"
+    >
+        <p class="mb-0">
+            Loading administration workspace...
+        </p>
+    </div>
+
+    <div
+        id="admin-dashboard-main"
+        hidden
+    >
+
+        <section id="document-library">
+
+            <div class="mb-2">
+
+                <h2 class="mb-1">
+                    Document Library
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Upload and manage school-approved learning
+                    material used by the AI tutor.
+                </p>
+
+            </div>
+
+            <div class="grid grid--2">
+
+                <article class="card">
+
+                    <div class="card__header">
+
+                        <h3 class="card__title">
+                            School documents
+                        </h3>
+
+                        <p class="card__description">
+                            Review textbooks, teacher notes,
+                            past papers, and other curriculum
+                            resources available to Mwalimu AI.
+                        </p>
+
+                    </div>
+
+                    <div class="card__footer">
+
+                        <button
+                            id="load-documents-button"
+                            type="button"
+                            class="button button--primary"
+                        >
+                            View documents
+                        </button>
+
+                    </div>
+
+                </article>
+
+                <article class="card">
+
+                    <div class="card__header">
+
+                        <h3 class="card__title">
+                            Upload material
+                        </h3>
+
+                        <p class="card__description">
+                            Add approved school learning material
+                            and process it for tutor retrieval.
+                        </p>
+
+                    </div>
+
+                    <div class="card__footer">
+
+                        <button
+                            id="upload-document-button"
+                            type="button"
+                            class="button button--secondary"
+                        >
+                            Upload document
+                        </button>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+        <section
+            id="document-list-panel"
+            class="mt-2"
+            hidden
+        >
+            <article class="card">
+
+                <div class="card__header">
+
+                    <h2 class="card__title">
+                        School documents
+                    </h2>
+
+                    <p class="card__description">
+                        School-approved curriculum material available
+                        to Mwalimu AI.
+                    </p>
+
+                </div>
+
+                <div
+                    id="document-list-error"
+                    class="alert alert--error mb-2"
+                    hidden
+                ></div>
+
+                <div
+                    id="document-list-loading"
+                    class="text-muted"
+                    hidden
+                >
+                    Loading documents...
+                </div>
+
+                <div
+                    id="document-list-empty"
+                    class="text-muted"
+                    hidden
+                >
+                    No documents have been uploaded yet.
+                </div>
+
+                <div
+                    id="document-list-content"
+                    hidden
+                >
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Type</th>
+                                    <th>Form</th>
+                                    <th>File</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="document-list-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card__footer">
+
+                    <button
+                        id="close-document-list"
+                        type="button"
+                        class="button button--secondary"
+                    >
+                        Close
+                    </button>
+
+                </div>
+
+            </article>
+        </section>
+
+
+        <section
+            id="document-upload-panel"
+            class="mt-2"
+            hidden
+        >
+            <article class="card">
+
+                <div class="card__header">
+
+                    <h2 class="card__title">
+                        Upload school document
+                    </h2>
+
+                    <p class="card__description">
+                        Add school-approved curriculum material
+                        for use by Mwalimu AI.
+                    </p>
+
+                </div>
+
+                <form
+                    id="document-upload-form"
+                    enctype="multipart/form-data"
+                >
+
+                    <div
+                        id="document-upload-error"
+                        class="alert alert--error mb-2"
+                        hidden
+                    ></div>
+
+                    <div
+                        id="document-upload-success"
+                        class="alert alert--success mb-2"
+                        hidden
+                    ></div>
+
+                    <div class="grid grid--2">
+
+                        <div>
+                            <label for="document-title">
+                                Document title
+                            </label>
+
+                            <input
+                                id="document-title"
+                                name="title"
+                                type="text"
+                                required
+                                maxlength="255"
+                                placeholder="e.g. Form 2 Biology Notes"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="document-type">
+                                Document type
+                            </label>
+
+                            <select
+                                id="document-type"
+                                name="document_type"
+                                required
+                            >
+                                <option value="">
+                                    Select document type
+                                </option>
+                                <option value="curriculum">
+                                    Curriculum
+                                </option>
+                                <option value="textbook">
+                                    Textbook
+                                </option>
+                                <option value="teacher_notes">
+                                    Teacher notes
+                                </option>
+                                <option value="reference">
+                                    Reference material
+                                </option>
+                                <option value="revision">
+                                    Revision material
+                                </option>
+                                <option value="past_paper">
+                                    Past paper
+                                </option>
+                                <option value="marking_scheme">
+                                    Marking scheme
+                                </option>
+                                <option value="mock_exam">
+                                    Mock exam
+                                </option>
+                                <option value="other">
+                                    Other
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="document-form-level">
+                                Form level
+                            </label>
+
+                            <select
+                                id="document-form-level"
+                                name="form_level"
+                                required
+                            >
+                                <option value="">
+                                    Select form level
+                                </option>
+                                <option value="1">Form 1</option>
+                                <option value="2">Form 2</option>
+                                <option value="3">Form 3</option>
+                                <option value="4">Form 4</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="document-subject">
+                                Subject
+                            </label>
+
+                            <select
+                                id="document-subject"
+                                name="subject_id"
+                                required
+                                disabled
+                            >
+                                <option value="">
+                                    Select form level first
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="document-topic">
+                                Topic
+                            </label>
+
+                            <select
+                                id="document-topic"
+                                name="topic_id"
+                                disabled
+                            >
+                                <option value="">
+                                    Select subject first
+                                </option>
+                            </select>
+
+                            <p class="text-muted">
+                                Topic is optional.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label for="document-file">
+                                Document file
+                            </label>
+
+                            <input
+                                id="document-file"
+                                name="file"
+                                type="file"
+                                required
+                                accept=".pdf,.txt,.docx"
+                            >
+
+                            <p class="text-muted">
+                                Supported files: PDF, TXT and DOCX.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div
+                        id="document-exam-fields"
+                        class="grid grid--2 mt-2"
+                        hidden
+                    >
+
+                        <div>
+                            <label for="document-exam-year">
+                                Exam year
+                            </label>
+
+                            <input
+                                id="document-exam-year"
+                                name="exam_year"
+                                type="number"
+                                min="2000"
+                                max="2100"
+                                placeholder="e.g. 2026"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="document-paper-number">
+                                Paper number
+                            </label>
+
+                            <input
+                                id="document-paper-number"
+                                name="paper_number"
+                                type="number"
+                                min="1"
+                                placeholder="e.g. 1"
+                            >
+                        </div>
+
+                    </div>
+
+                    <div class="card__footer">
+
+                        <button
+                            id="cancel-document-upload"
+                            type="button"
+                            class="button button--secondary"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            id="submit-document-upload"
+                            type="submit"
+                            class="button button--primary"
+                        >
+                            Upload and process
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </article>
+        </section>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/admin-dashboard.js"></script>
+{% endblock %}

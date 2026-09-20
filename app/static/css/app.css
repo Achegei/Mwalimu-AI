@@ -368,6 +368,13 @@ h6 {
 }
 
 
+/* Elements controlled by the HTML hidden attribute must remain hidden
+   even when utility classes such as .grid define a display value. */
+[hidden] {
+    display: none !important;
+}
+
+
 /* -------------------------------------------------
    Grid
 ------------------------------------------------- */

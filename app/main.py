@@ -72,6 +72,15 @@ async def teacher_dashboard(request: Request):
     )
 
 
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/dashboard.html",
+        context={},
+    )
+
+
 @app.get(
     "/student/subjects/{subject_id}",
     response_class=HTMLResponse,

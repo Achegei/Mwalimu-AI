@@ -59,6 +59,11 @@ function redirectForRole(role) {
         return;
     }
 
+    if (role === "admin") {
+        window.location.href = "/admin/dashboard";
+        return;
+    }
+
     localStorage.removeItem("mwalimu_access_token");
     localStorage.removeItem("mwalimu_user");
 

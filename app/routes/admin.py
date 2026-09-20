@@ -17,12 +17,18 @@ from app.core.database import get_db
 from app.core.dependencies import require_roles
 from app.models.enums import DocumentType, UserRole
 from app.models.user import User
+from app.schemas.content import (
+    SubjectSummary,
+    SubjectWithTopics,
+)
 from app.schemas.admin import (
     AdminBulkImportResponse,
     AdminClassroomCreate,
     AdminClassroomSummary,
     AdminDocumentSummary,
     AdminEnrollmentStudent,
+    AdminTeachingAssignmentCreate,
+    AdminTeachingAssignmentSummary,
     AdminUserCreate,
     AdminUserSummary,
 )
@@ -30,6 +36,15 @@ from app.services.admin_documents import (
     create_school_document,
     get_school_documents,
     validate_document_scope,
+)
+from app.services.content import (
+    get_active_subjects,
+    get_active_topics_for_subject,
+)
+from app.services.teaching_assignments import (
+    create_teaching_assignment,
+    deactivate_teaching_assignment,
+    get_school_teaching_assignments,
 )
 from app.services.document_processing import process_document
 from app.services.document_storage import (
@@ -53,6 +68,149 @@ router = APIRouter(
     prefix="/admin",
     tags=["Admin"],
 )
+
+
+@router.get(
+    "/subjects",
+    response_model=list[SubjectSummary],
+)
+async def list_admin_subjects(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> list[SubjectSummary]:
+    return await get_active_subjects(
+        db=db,
+        school_id=current_user.school_id,
+    )
+
+
+@router.get(
+    "/subjects/{subject_id}/topics",
+    response_model=SubjectWithTopics,
+)
+async def list_admin_subject_topics(
+    subject_id: int,
+    form_level: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> SubjectWithTopics:
+    if form_level < 1 or form_level > 4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Form level must be between 1 and 4.",
+        )
+
+    subjects = await get_active_subjects(
+        db=db,
+        school_id=current_user.school_id,
+    )
+
+    subject = next(
+        (
+            item
+            for item in subjects
+            if item.id == subject_id
+        ),
+        None,
+    )
+
+    if subject is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subject not found.",
+        )
+
+    topics = await get_active_topics_for_subject(
+        db=db,
+        subject_id=subject.id,
+        school_id=current_user.school_id,
+        form_level=form_level,
+    )
+
+    return SubjectWithTopics(
+        id=subject.id,
+        name=subject.name,
+        slug=subject.slug,
+        description=subject.description,
+        topics=topics,
+    )
+
+
+@router.get(
+    "/teaching-assignments",
+    response_model=list[AdminTeachingAssignmentSummary],
+)
+async def list_teaching_assignments(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> list[AdminTeachingAssignmentSummary]:
+    assignments = await get_school_teaching_assignments(
+        db=db,
+        school_id=current_user.school_id,
+    )
+
+    return assignments
+
+
+@router.post(
+    "/teaching-assignments",
+    response_model=AdminTeachingAssignmentSummary,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_admin_teaching_assignment(
+    payload: AdminTeachingAssignmentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> AdminTeachingAssignmentSummary:
+    try:
+        assignment = await create_teaching_assignment(
+            db=db,
+            school_id=current_user.school_id,
+            teacher_id=payload.teacher_id,
+            subject_id=payload.subject_id,
+            classroom_id=payload.classroom_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return assignment
+
+
+@router.delete(
+    "/teaching-assignments/{assignment_id}",
+    response_model=AdminTeachingAssignmentSummary,
+)
+async def deactivate_admin_teaching_assignment(
+    assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+) -> AdminTeachingAssignmentSummary:
+    try:
+        assignment = await deactivate_teaching_assignment(
+            db=db,
+            school_id=current_user.school_id,
+            assignment_id=assignment_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return assignment
 
 
 @router.get(
@@ -283,7 +441,6 @@ async def create_classroom(
             name=payload.name,
             form_level=payload.form_level,
             academic_year=payload.academic_year,
-            teacher_id=payload.teacher_id,
         )
     except ValueError as exc:
         detail = str(exc)

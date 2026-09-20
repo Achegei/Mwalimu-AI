@@ -174,7 +174,6 @@ async def test_admin_cannot_manage_foreign_school_classroom(
 
     foreign_classroom = Classroom(
         school_id=other_school.id,
-        teacher_id=None,
         name="Foreign Form 2",
         form_level=2,
         academic_year=2026,
@@ -550,7 +549,6 @@ async def test_admin_cannot_remove_from_foreign_classroom(
 
     foreign_classroom = Classroom(
         school_id=other_school.id,
-        teacher_id=None,
         name="Foreign Removal Classroom",
         form_level=2,
         academic_year=2026,

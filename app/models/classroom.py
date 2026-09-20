@@ -24,12 +24,6 @@ class Classroom(TimestampMixin, Base):
         nullable=False,
     )
 
-    teacher_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        index=True,
-        nullable=True,
-    )
-
     name: Mapped[str] = mapped_column(
         String(100),
         nullable=False,

@@ -15,6 +15,8 @@ from app.core.security import hash_password
 from app.main import app
 from app.models.base import Base
 from app.models.classroom import Classroom
+from app.models.teaching_assignment import TeachingAssignment
+from app.models.content import Subject
 from app.models.enrollment import Enrollment
 from app.models.enums import UserRole
 from app.models.school import School
@@ -139,13 +141,36 @@ async def seeded_users(
 
     classroom = Classroom(
         school_id=school.id,
-        teacher_id=teacher.id,
         name="Form 2 Test",
         form_level=2,
         academic_year=2026,
     )
 
-    db_session.add(classroom)
+    subject = Subject(
+        school_id=school.id,
+        name="Test Subject",
+        slug="test-subject",
+        description="Shared subject for test fixtures.",
+        is_active=True,
+    )
+
+    db_session.add_all(
+        [
+            classroom,
+            subject,
+        ]
+    )
+    await db_session.flush()
+
+    teaching_assignment = TeachingAssignment(
+        school_id=school.id,
+        teacher_id=teacher.id,
+        subject_id=subject.id,
+        classroom_id=classroom.id,
+        is_active=True,
+    )
+
+    db_session.add(teaching_assignment)
     await db_session.flush()
 
     enrollment = Enrollment(
@@ -164,5 +189,7 @@ async def seeded_users(
         "student": student,
         "admin": admin,
         "classroom": classroom,
+        "subject": subject,
+        "teaching_assignment": teaching_assignment,
         "enrollment": enrollment,
     }

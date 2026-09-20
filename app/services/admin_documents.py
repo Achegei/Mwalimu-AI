@@ -6,6 +6,7 @@ from app.models.document import Document
 from app.models.enums import (
     DocumentProcessingStatus,
     DocumentType,
+    DocumentScope,
 )
 
 
@@ -96,6 +97,8 @@ async def create_school_document(
 
     document = Document(
         school_id=school_id,
+        scope=DocumentScope.COMMON,
+        teaching_assignment_id=None,
         subject_id=subject_id,
         topic_id=topic_id,
         uploaded_by_id=uploaded_by_id,

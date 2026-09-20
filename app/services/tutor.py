@@ -369,6 +369,7 @@ async def generate_tutor_response(
         topic_id=topic["id"],
         form_level=topic["form_level"],
         query=retrieval_query,
+        student_id=student_id,
         limit=5,
     )
 
@@ -512,6 +513,7 @@ async def continue_tutor_session(
         topic_id=topic["id"],
         form_level=topic["form_level"],
         query=cleaned_message,
+        student_id=student_id,
         limit=5,
     )
 

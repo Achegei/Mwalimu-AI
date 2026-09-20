@@ -5,6 +5,7 @@ from app.models.assessment import AssessmentAttempt
 from app.models.classroom import Classroom
 from app.models.content import Topic
 from app.models.enrollment import Enrollment
+from app.models.teaching_assignment import TeachingAssignment
 from app.models.enums import (
     AssessmentStatus,
     AssessmentType,
@@ -15,11 +16,26 @@ async def get_teacher_classes(
     db: AsyncSession,
     teacher_id: int,
 ) -> list[Classroom]:
+    """
+    Return distinct classrooms authorized by the teacher's
+    active Teaching Assignments.
+
+    TeachingAssignment is the authoritative relationship
+    between teachers and classrooms.
+    """
+
     result = await db.execute(
         select(Classroom)
-        .where(
-            Classroom.teacher_id == teacher_id,
+        .join(
+            TeachingAssignment,
+            TeachingAssignment.classroom_id == Classroom.id,
         )
+        .where(
+            TeachingAssignment.teacher_id == teacher_id,
+            TeachingAssignment.is_active.is_(True),
+            TeachingAssignment.school_id == Classroom.school_id,
+        )
+        .distinct()
         .order_by(
             Classroom.academic_year.desc(),
             Classroom.form_level.asc(),
@@ -36,12 +52,28 @@ async def get_teacher_classroom(
     teacher_school_id: int,
     classroom_id: int,
 ) -> Classroom | None:
+    """
+    Return a classroom only when an active Teaching Assignment
+    authorizes the teacher for that classroom and school.
+
+    A teacher may have multiple subject assignments in the same
+    classroom, so the classroom is returned only once.
+    """
+
     result = await db.execute(
-        select(Classroom).where(
-            Classroom.id == classroom_id,
-            Classroom.teacher_id == teacher_id,
-            Classroom.school_id == teacher_school_id,
+        select(Classroom)
+        .join(
+            TeachingAssignment,
+            TeachingAssignment.classroom_id == Classroom.id,
         )
+        .where(
+            Classroom.id == classroom_id,
+            Classroom.school_id == teacher_school_id,
+            TeachingAssignment.teacher_id == teacher_id,
+            TeachingAssignment.school_id == teacher_school_id,
+            TeachingAssignment.is_active.is_(True),
+        )
+        .distinct()
     )
 
     return result.scalar_one_or_none()

@@ -42,7 +42,6 @@ class AdminUserCreate(BaseModel):
 class AdminClassroomSummary(BaseModel):
     id: int
     school_id: int
-    teacher_id: int | None
     name: str
     form_level: int
     academic_year: int
@@ -65,7 +64,7 @@ class AdminClassroomCreate(BaseModel):
         ge=2000,
         le=2100,
     )
-    teacher_id: int | None = None
+
 
 
 class AdminEnrollmentStudent(BaseModel):
@@ -119,3 +118,28 @@ class AdminDocumentSummary(BaseModel):
         "from_attributes": True,
     }
 
+
+
+class AdminTeachingAssignmentCreate(BaseModel):
+    teacher_id: int = Field(
+        ge=1,
+    )
+    subject_id: int = Field(
+        ge=1,
+    )
+    classroom_id: int = Field(
+        ge=1,
+    )
+
+
+class AdminTeachingAssignmentSummary(BaseModel):
+    id: int
+    school_id: int
+    teacher_id: int
+    subject_id: int
+    classroom_id: int
+    is_active: bool
+
+    model_config = {
+        "from_attributes": True,
+    }

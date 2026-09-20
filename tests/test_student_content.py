@@ -43,7 +43,12 @@ async def test_student_can_list_subjects(
 
     data = response.json()
 
-    assert len(data) == 1
+    subject_ids = {
+        item["id"]
+        for item in data
+    }
+
+    assert subject.id in subject_ids
     assert data[0]["name"] == "Biology"
     assert data[0]["slug"] == "biology"
 

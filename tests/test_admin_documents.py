@@ -577,3 +577,271 @@ async def test_failed_ingestion_keeps_document_and_file(
     )
 
     assert stored_file.is_file()
+
+
+@pytest.mark.asyncio
+async def test_admin_lists_only_own_school_subjects(
+    client,
+    db_session,
+    seeded_users,
+):
+    school = seeded_users["school"]
+
+    own_subject = Subject(
+        school_id=school.id,
+        name="Admin Mathematics",
+        slug="admin-mathematics",
+        description="Own school subject.",
+        is_active=True,
+    )
+
+    foreign_school = School(
+        name="Foreign Curriculum School",
+        code="ADMIN-CURRICULUM-002",
+        is_active=True,
+    )
+
+    db_session.add_all(
+        [
+            own_subject,
+            foreign_school,
+        ]
+    )
+    await db_session.flush()
+
+    foreign_subject = Subject(
+        school_id=foreign_school.id,
+        name="Foreign Physics",
+        slug="foreign-physics",
+        description="Other school subject.",
+        is_active=True,
+    )
+
+    db_session.add(foreign_subject)
+    await db_session.commit()
+
+    headers = await login(
+        client,
+        "admin.test",
+        "Admin123!",
+    )
+
+    response = await client.get(
+        "/admin/subjects",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    subject_ids = {
+        subject["id"]
+        for subject in response.json()
+    }
+
+    assert own_subject.id in subject_ids
+    assert foreign_subject.id not in subject_ids
+
+
+@pytest.mark.asyncio
+async def test_admin_subject_topics_respect_form_level(
+    client,
+    db_session,
+    seeded_users,
+):
+    school = seeded_users["school"]
+
+    subject = Subject(
+        school_id=school.id,
+        name="Admin Biology",
+        slug="admin-biology",
+        description="Biology curriculum.",
+        is_active=True,
+    )
+
+    db_session.add(subject)
+    await db_session.flush()
+
+    form_two_topic = Topic(
+        subject_id=subject.id,
+        slug="admin-form-two-transport",
+        title="Transport",
+        summary="Form 2 transport.",
+        form_level=2,
+        order_index=1,
+        is_active=True,
+    )
+
+    form_three_topic = Topic(
+        subject_id=subject.id,
+        slug="admin-form-three-genetics",
+        title="Genetics",
+        summary="Form 3 genetics.",
+        form_level=3,
+        order_index=2,
+        is_active=True,
+    )
+
+    db_session.add_all(
+        [
+            form_two_topic,
+            form_three_topic,
+        ]
+    )
+    await db_session.commit()
+
+    headers = await login(
+        client,
+        "admin.test",
+        "Admin123!",
+    )
+
+    response = await client.get(
+        f"/admin/subjects/{subject.id}/topics",
+        params={
+            "form_level": 2,
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    topic_ids = {
+        topic["id"]
+        for topic in data["topics"]
+    }
+
+    assert form_two_topic.id in topic_ids
+    assert form_three_topic.id not in topic_ids
+
+
+@pytest.mark.asyncio
+async def test_admin_cannot_list_foreign_school_subject_topics(
+    client,
+    db_session,
+    seeded_users,
+):
+    foreign_school = School(
+        name="Foreign Topic School",
+        code="ADMIN-TOPIC-002",
+        is_active=True,
+    )
+
+    db_session.add(foreign_school)
+    await db_session.flush()
+
+    foreign_subject = Subject(
+        school_id=foreign_school.id,
+        name="Foreign Chemistry",
+        slug="foreign-chemistry-admin-topics",
+        description="Foreign curriculum.",
+        is_active=True,
+    )
+
+    db_session.add(foreign_subject)
+    await db_session.commit()
+
+    headers = await login(
+        client,
+        "admin.test",
+        "Admin123!",
+    )
+
+    response = await client.get(
+        f"/admin/subjects/{foreign_subject.id}/topics",
+        params={
+            "form_level": 2,
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+
+    assert response.json() == {
+        "detail": "Subject not found.",
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "form_level",
+    [
+        0,
+        5,
+    ],
+)
+async def test_admin_subject_topics_reject_invalid_form_level(
+    client,
+    db_session,
+    seeded_users,
+    form_level,
+):
+    subject = Subject(
+        school_id=seeded_users["school"].id,
+        name=f"Validation Subject {form_level}",
+        slug=f"validation-subject-{form_level}",
+        description="Form validation subject.",
+        is_active=True,
+    )
+
+    db_session.add(subject)
+    await db_session.commit()
+
+    headers = await login(
+        client,
+        "admin.test",
+        "Admin123!",
+    )
+
+    response = await client.get(
+        f"/admin/subjects/{subject.id}/topics",
+        params={
+            "form_level": form_level,
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+
+    assert response.json() == {
+        "detail": "Form level must be between 1 and 4.",
+    }
+
+
+@pytest.mark.asyncio
+async def test_teacher_cannot_access_admin_curriculum(
+    client,
+    seeded_users,
+):
+    headers = await login(
+        client,
+        "teacher.test",
+        "Teacher123!",
+    )
+
+    response = await client.get(
+        "/admin/subjects",
+        headers=headers,
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_student_cannot_access_admin_curriculum(
+    client,
+    seeded_users,
+):
+    headers = await login(
+        client,
+        "student.test",
+        "Student123!",
+    )
+
+    response = await client.get(
+        "/admin/subjects",
+        headers=headers,
+    )
+
+    assert response.status_code == 403

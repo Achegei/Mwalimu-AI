@@ -100,31 +100,13 @@ async def create_school_classroom(
     name: str,
     form_level: int,
     academic_year: int,
-    teacher_id: int | None,
 ) -> Classroom:
     """
     Create a classroom owned by the authenticated admin's school.
 
-    When a teacher is supplied, the teacher must be an active
-    teacher belonging to the same school.
+    Teacher-to-classroom academic authority is represented by
+    TeachingAssignment, not by Classroom.
     """
-
-    if teacher_id is not None:
-        teacher_result = await db.execute(
-            select(User).where(
-                User.id == teacher_id,
-                User.school_id == school_id,
-                User.role == UserRole.TEACHER,
-                User.is_active.is_(True),
-            )
-        )
-
-        teacher = teacher_result.scalar_one_or_none()
-
-        if teacher is None:
-            raise ValueError(
-                "Teacher not found in this school."
-            )
 
     existing_result = await db.execute(
         select(Classroom.id).where(
@@ -142,7 +124,6 @@ async def create_school_classroom(
 
     classroom = Classroom(
         school_id=school_id,
-        teacher_id=teacher_id,
         name=name,
         form_level=form_level,
         academic_year=academic_year,

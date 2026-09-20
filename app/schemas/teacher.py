@@ -1,3 +1,8 @@
+from app.models.enums import (
+    DocumentProcessingStatus,
+    DocumentScope,
+    DocumentType,
+)
 from app.schemas.content import StudentProgressResponse
 from pydantic import BaseModel
 
@@ -144,3 +149,30 @@ class TeacherStudentProgressResponse(BaseModel):
     classroom_name: str
     student: TeacherStudentProgressStudent
     progress: StudentProgressResponse
+
+
+class TeacherDocumentSummary(BaseModel):
+    id: int
+    school_id: int
+    subject_id: int
+    topic_id: int | None
+    scope: DocumentScope
+    teaching_assignment_id: int
+    uploaded_by_id: int | None
+    title: str
+    document_type: DocumentType
+    form_level: int
+    academic_year: int | None
+    exam_year: int | None
+    paper_number: str | None
+    original_filename: str
+    storage_key: str
+    mime_type: str
+    file_size: int
+    processing_status: DocumentProcessingStatus
+    error_message: str | None
+    is_active: bool
+
+    model_config = {
+        "from_attributes": True,
+    }
